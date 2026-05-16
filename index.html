@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ea002a">
+<title>ScoreSheets</title>
+<style>
+  :root {
+    --spm-red:    #ea002a;
+    --spm-blue:   #0031a1;
+    --text:       #111827;
+    --text-dim:   #6b7280;
+    --border:     #e5e7eb;
+    --bg:         #f9fafb;
+    --bg-card:    #ffffff;
+    --ok:         #16a34a;
+    --warn:       #ca8a04;
+    --bad:        #dc2626;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text); background: var(--bg);
+    line-height: 1.5; min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    background: linear-gradient(90deg, var(--spm-red) 0%, var(--spm-blue) 100%);
+    color: #fff;
+  }
+  .header h1 { font-size: 1.15rem; font-weight: 800; margin: 0; }
+  .header .ver { font-size: 0.78rem; opacity: 0.85; }
+  main { max-width: 720px; margin: 0 auto; padding: 14px; }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; margin-bottom: 12px;
+  }
+  .card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 800; }
+
+  /* Form */
+  label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-dim); margin-bottom: 2px; }
+  input[type=text], input[type=number], input[type=date], select, textarea {
+    width: 100%; font: inherit; font-size: 1rem;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; color: var(--text);
+  }
+  textarea { resize: vertical; min-height: 50px; }
+  .row { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin-bottom: 8px; }
+  .row.full { grid-template-columns: 1fr; }
+  .row.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 480px) {
+    .row.three { grid-template-columns: 1fr 1fr; }
+  }
+
+  .seg {
+    display: flex; gap: 4px; padding: 3px; border-radius: 10px;
+    background: #f3f4f6; border: 1px solid var(--border);
+  }
+  .seg-btn {
+    flex: 1; padding: 9px 8px; border: 0; background: transparent;
+    font: inherit; font-weight: 700; font-size: 0.92rem; color: var(--text-dim);
+    border-radius: 7px; cursor: pointer;
+  }
+  .seg-btn.active { background: #fff; color: var(--spm-blue); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  /* Camera capture */
+  .capture-zone {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 22px 12px; text-align: center;
+    background: #fafbfc; cursor: pointer;
+    transition: border-color 120ms, background-color 120ms;
+  }
+  .capture-zone:hover, .capture-zone.dragover {
+    border-color: var(--spm-blue); background: #eff6ff;
+  }
+  .capture-zone.loaded { border-style: solid; border-color: var(--ok); background: #f0fdf4; padding: 8px; }
+  .capture-zone input[type=file] { display: none; }
+  .capture-zone .cz-title { font-weight: 800; font-size: 1.02rem; }
+  .capture-zone .cz-sub { font-size: 0.88rem; color: var(--text-dim); margin-top: 4px; }
+  .capture-zone .cz-camera-svg {
+    width: 38px; height: 38px; opacity: 0.6; margin-bottom: 6px;
+  }
+  .capture-preview { max-width: 100%; max-height: 360px; border-radius: 8px; display: block; margin: 0 auto; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; font: inherit; font-weight: 800; font-size: 1rem;
+    padding: 12px 18px; border-radius: 10px;
+    background: var(--spm-blue); color: #fff;
+    border: 1px solid var(--spm-blue); cursor: pointer;
+    width: 100%;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.secondary { background: #fff; color: var(--spm-blue); }
+  .btn.danger    { background: #fff; color: var(--spm-red); border-color: var(--spm-red); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+
+  /* Submission list */
+  .submissions { display: flex; flex-direction: column; gap: 8px; }
+  .sub {
+    display: grid; grid-template-columns: 60px 1fr auto; gap: 10px;
+    padding: 8px;
+    border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  }
+  .sub-thumb {
+    width: 60px; height: 60px; object-fit: cover;
+    border-radius: 6px; background: #f3f4f6; cursor: pointer;
+  }
+  .sub-meta-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .sub-tag {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .sub-tag.masters { background: #ede9fe; color: #5b21b6; }
+  .sub-tag.doubles { background: #cffafe; color: #155e75; }
+  .sub-tag.other   { background: #f3f4f6; color: var(--text-dim); }
+  .sub-when { color: var(--text-dim); font-size: 0.85rem; }
+  .sub-meta { font-size: 0.88rem; color: var(--text-dim); margin-top: 2px; }
+  .sub-meta .strong { color: var(--text); font-weight: 700; }
+  .sub-actions { display: flex; gap: 4px; }
+  .icon-btn { background: transparent; border: 0; padding: 4px; cursor: pointer; color: var(--text-dim); border-radius: 4px; }
+  .icon-btn:hover { background: #f3f4f6; color: var(--text); }
+  .icon-btn.danger:hover { color: var(--spm-red); }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* Filter tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tab {
+    flex: 1; min-width: 70px; text-align: center;
+    padding: 6px 10px; font-size: 0.88rem; font-weight: 700;
+    border: 1px solid var(--border); background: #fff; color: var(--text);
+    border-radius: 8px; cursor: pointer;
+  }
+  .tab.active { background: var(--spm-blue); color: #fff; border-color: var(--spm-blue); }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+    display: none; align-items: center; justify-content: center;
+    z-index: 9999; padding: 16px;
+  }
+  .lightbox.shown { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 8px; }
+  .lightbox-close {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(0,0,0,0.5); color: #fff; border: 0;
+    width: 38px; height: 38px; border-radius: 50%; font-size: 22px;
+    cursor: pointer;
+  }
+
+  .empty { text-align: center; padding: 30px 14px; color: var(--text-dim); font-size: 0.95rem; }
+
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; padding: 10px 18px;
+    border-radius: 8px; font-size: 0.92rem; font-weight: 600;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+    z-index: 1000; opacity: 0; transition: opacity 200ms; max-width: 92vw;
+  }
+  .toast.shown { opacity: 1; }
+  .toast.err   { background: var(--spm-red); }
+  .toast.ok    { background: var(--ok); }
+
+  .update-overlay {
+    position: fixed; inset: 0; background: rgba(15,23,42,0.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 9000; color: #fff; text-align: center; padding: 24px;
+  }
+  .update-overlay.shown { display: flex; }
+  .update-overlay .uo-card {
+    background: var(--bg-card); color: var(--text);
+    border-radius: 14px; padding: 22px; max-width: 380px;
+  }
+
+  .id-strip {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 0.85rem; color: var(--text-dim);
+  }
+  .id-strip input { flex: 1; min-width: 140px; padding: 6px 10px; font-size: 0.92rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ScoreSheets</h1>
+  <div class="ver" id="versionLabel"></div>
+</div>
+
+<main>
+  <!-- Identity strip -->
+  <div class="card">
+    <div class="id-strip">
+      <label for="nicknameInput" style="margin:0;">Your name</label>
+      <input type="text" id="nicknameInput" placeholder="(optional — saved on this device)">
+      <span id="deviceLabel" style="font-size:0.74rem;"></span>
+    </div>
+  </div>
+
+  <!-- Upload form -->
+  <div class="card">
+    <h2 id="formTitle">Submit scoresheet photo</h2>
+
+    <div style="margin-bottom: 10px;">
+      <label>Match type</label>
+      <div class="seg" id="matchTypeSeg">
+        <button type="button" class="seg-btn active" data-mt="masters">Masters</button>
+        <button type="button" class="seg-btn" data-mt="doubles">Doubles</button>
+        <button type="button" class="seg-btn" data-mt="other">Other</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="divNum">Division #</label>
+        <input type="text" id="divNum" placeholder="e.g. 042" inputmode="numeric">
+      </div>
+      <div>
+        <label for="divName">Division name</label>
+        <input type="text" id="divName" placeholder="e.g. Mid-West Masters" list="divNameList">
+        <datalist id="divNameList"></datalist>
+      </div>
+    </div>
+
+    <div class="row three">
+      <div>
+        <label for="weekNo">Week</label>
+        <input type="number" id="weekNo" min="1" max="20" inputmode="numeric" placeholder="1-20">
+      </div>
+      <div>
+        <label for="playedOn">Played on</label>
+        <input type="date" id="playedOn">
+      </div>
+      <div></div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="teamA">Team A</label>
+        <input type="text" id="teamA" placeholder="e.g. 04203" inputmode="numeric">
+      </div>
+      <div>
+        <label for="teamB">Team B</label>
+        <input type="text" id="teamB" placeholder="opponent" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="row full">
+      <div>
+        <label for="subNotes">Notes</label>
+        <textarea id="subNotes" placeholder="(optional)"></textarea>
+      </div>
+    </div>
+
+    <label style="margin-top:4px;">Photo</label>
+    <label class="capture-zone" id="captureZone">
+      <svg class="cz-camera-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      <div class="cz-title">Take photo / choose image</div>
+      <div class="cz-sub">Camera opens on phones; gallery on desktop.</div>
+      <input type="file" id="photoInput" accept="image/*" capture="environment">
+    </label>
+    <img id="capturePreview" class="capture-preview" style="display:none; margin-top:10px;" alt="">
+
+    <div class="btn-row" style="margin-top:14px;">
+      <button type="button" class="btn" id="submitBtn" disabled>Submit</button>
+      <button type="button" class="btn secondary" id="clearFormBtn" style="display:none;">Clear form</button>
+    </div>
+  </div>
+
+  <!-- Recent submissions -->
+  <div class="card">
+    <h2>Recent submissions</h2>
+    <div class="tabs" id="filterTabs">
+      <button type="button" class="tab active" data-filter="all">All</button>
+      <button type="button" class="tab" data-filter="masters">Masters</button>
+      <button type="button" class="tab" data-filter="doubles">Doubles</button>
+      <button type="button" class="tab" data-filter="mine">Mine</button>
+    </div>
+    <div class="submissions" id="subsRoot"></div>
+  </div>
+</main>
+
+<div class="update-overlay" id="updateOverlay">
+  <div class="uo-card">
+    <h2 style="margin:0 0 8px;font-size:1.05rem;">New version available</h2>
+    <p style="margin:0;">Reloading…</p>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">×</button>
+  <img id="lightboxImg" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="version.js?_=__TS__"></script>
+<script>
+(function(){
+  const s = document.currentScript.previousElementSibling;
+  if (s && s.src.indexOf('__TS__') !== -1) s.src = s.src.replace('__TS__', Date.now());
+})();
+</script>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   ScoreSheets — phone-uploaded scoresheet photos for masters/doubles.
+   Storage: Supabase Storage 'scoresheets' bucket (public read URLs).
+   Data:    scoresheets.submissions
+   Auth:    anon for submit + browse; ?key=<service_role> for hide/delete.
+   ════════════════════════════════════════════════════════════════════════ */
+const APP_NAME = 'ScoreSheets';
+const SB_URL   = 'https://dqzbekoaysgaiqljueac.supabase.co';
+const SB_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxemJla29heXNnYWlxbGp1ZWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzA5NzgsImV4cCI6MjA5MDc0Njk3OH0.cCdGxZ4zEFzU_r6lWSDeoNWG67Q4MSYCAtpds035dfU';
+const SCHEMA   = 'scoresheets';
+const BUCKET   = 'scoresheets';
+
+const URL_PARAMS = new URLSearchParams(location.search);
+const SB_KEY  = URL_PARAMS.get('key') || '';
+const IS_ADMIN = !!SB_KEY;
+
+const HEADERS_READ  = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Accept-Profile': SCHEMA };
+const HEADERS_WRITE = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON,
+  'Content-Type': 'application/json', 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA,
+  Prefer: 'return=representation' };
+const HEADERS_ADMIN = IS_ADMIN ? { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY,
+  'Content-Type': 'application/json', 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA,
+  Prefer: 'return=representation' } : null;
+const HEADERS_APA   = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Accept-Profile': 'apa_core' };
+
+/* ─── Device identity (Snapshot/CoastalCritters pattern) ─────────────*/
+function getDeviceId() {
+  let id = localStorage.getItem('scoresheets.device_id');
+  if (!id) {
+    id = (crypto.randomUUID && crypto.randomUUID())
+      || ('cid-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,10));
+    try { localStorage.setItem('scoresheets.device_id', id); }
+    catch (_) { id = 'nostorage-' + id; }
+  }
+  return id;
+}
+function getNickname() { return localStorage.getItem('scoresheets.nickname') || ''; }
+function setNickname(s) { try { localStorage.setItem('scoresheets.nickname', s); } catch (_) {} }
+const DEVICE_ID = getDeviceId();
+
+/* ─── State ──────────────────────────────────────────────────────────*/
+let _subs    = [];
+let _matchType = 'masters';
+let _filter  = 'all';
+let _photo   = null;       // { file, mime, bytes }
+
+/* ─── Supabase REST helpers ─────────────────────────────────────────*/
+async function sb(method, path, body, headers) {
+  const opts = { method, headers: { ...(headers || (method === 'GET' ? HEADERS_READ : HEADERS_WRITE)) } };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(SB_URL + '/rest/v1/' + path, opts);
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error('Supabase ' + r.status + ': ' + txt.slice(0,300));
+  }
+  if (r.status === 204) return null;
+  return (r.headers.get('Content-Type') || '').includes('json') ? r.json() : r.text();
+}
+
+/* ─── Storage upload ──────────────────────────────────────────────────
+   We use the basic Storage REST API: POST /storage/v1/object/<bucket>/<path>
+   with the raw bytes + content type. Anon role + storage RLS policy
+   "scoresheets_anon_insert" allows this. */
+async function uploadPhoto(file) {
+  const ext = (file.name || '').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const rand = Math.random().toString(36).slice(2, 10);
+  const path = 'submissions/' + DEVICE_ID + '/' + Date.now() + '-' + rand + '.' + ext;
+  const url  = SB_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(path);
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON,
+               'Content-Type': file.type || 'image/jpeg', 'x-upsert': 'false' },
+    body: file
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error('Storage ' + r.status + ': ' + t.slice(0, 250));
+  }
+  return path;
+}
+function publicUrlFor(path, bucket) {
+  return SB_URL + '/storage/v1/object/public/' + (bucket || BUCKET) + '/' + path;
+}
+
+/* ─── Data load + save ───────────────────────────────────────────────*/
+async function loadAll() {
+  _subs = await sb('GET', 'submissions?select=*&order=created_at.desc&limit=200') || [];
+}
+
+async function saveSubmission(payload) {
+  const created = await sb('POST', 'submissions', payload);
+  return created && created[0];
+}
+
+async function adminHide(id, hide) {
+  if (!HEADERS_ADMIN) throw new Error('Admin key required');
+  return sb('PATCH', 'submissions?id=eq.' + id, { hidden: !!hide }, HEADERS_ADMIN);
+}
+
+/* ─── Helpers ────────────────────────────────────────────────────────*/
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function fmtCreated(iso) {
+  const d = new Date(iso);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const that = new Date(d); that.setHours(0,0,0,0);
+  const diff = Math.round((today - that) / 86400000);
+  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (diff === 0) return 'today ' + t;
+  if (diff === 1) return 'yesterday ' + t;
+  if (diff < 7)   return d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+/* ─── Render ─────────────────────────────────────────────────────────*/
+function renderAll() {
+  document.getElementById('nicknameInput').value = getNickname();
+  document.getElementById('deviceLabel').textContent = '· device ' + DEVICE_ID.slice(0, 8);
+  // Datalist of division names from past submissions for autocomplete.
+  const divs = [...new Set(_subs.map(s => s.division_name).filter(Boolean))];
+  document.getElementById('divNameList').innerHTML =
+    divs.map(d => '<option value="' + esc(d) + '">').join('');
+  // Filter + render submissions.
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.filter === _filter));
+  let list = _subs;
+  if (_filter === 'masters' || _filter === 'doubles') list = list.filter(s => s.match_type === _filter);
+  else if (_filter === 'mine')                          list = list.filter(s => s.device_id === DEVICE_ID);
+  const root = document.getElementById('subsRoot');
+  if (list.length === 0) {
+    root.innerHTML = '<div class="empty">No submissions yet.</div>';
+    return;
+  }
+  root.innerHTML = list.map(s => {
+    const url = publicUrlFor(s.storage_path, s.storage_bucket);
+    const tag = '<span class="sub-tag ' + esc(s.match_type) + '">' + esc(s.match_type) + '</span>';
+    const meta = [
+      s.division_number ? '<span class="strong">div ' + esc(s.division_number) + '</span>' : '',
+      s.division_name   ? esc(s.division_name) : '',
+      s.week_no         ? 'wk ' + esc(s.week_no) : '',
+      s.played_on       ? fmtDate(s.played_on) : '',
+      (s.team_a_number || s.team_b_number) ? esc(s.team_a_number || '?') + ' vs ' + esc(s.team_b_number || '?') : ''
+    ].filter(Boolean).join(' · ');
+    const mine = s.device_id === DEVICE_ID;
+    const adminBtn = IS_ADMIN
+      ? '<button class="icon-btn danger" data-hide="' + s.id + '" title="Hide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>'
+      : '';
+    return '<div class="sub">'
+      + '<img class="sub-thumb" data-lightbox="' + esc(url) + '" src="' + esc(url) + '" alt="" loading="lazy">'
+      + '<div>'
+      +   '<div class="sub-meta-top">' + tag + '<span class="sub-when">' + esc(fmtCreated(s.created_at)) + '</span>' + (mine ? '<span class="sub-tag other">mine</span>' : '') + '</div>'
+      +   '<div class="sub-meta">' + meta + '</div>'
+      +   (s.notes ? '<div class="sub-meta" style="margin-top:4px;color:var(--text);">' + esc(s.notes) + '</div>' : '')
+      +   (s.submitter_name ? '<div class="sub-meta" style="margin-top:2px;">— ' + esc(s.submitter_name) + '</div>' : '')
+      + '</div>'
+      + '<div class="sub-actions">' + adminBtn + '</div>'
+      + '</div>';
+  }).join('');
+  root.querySelectorAll('[data-lightbox]').forEach(img => img.addEventListener('click', () => openLightbox(img.dataset.lightbox)));
+  root.querySelectorAll('[data-hide]').forEach(btn => btn.addEventListener('click', () => doHide(+btn.dataset.hide)));
+}
+
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.add('shown');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('shown');
+  document.getElementById('lightboxImg').src = '';
+}
+
+async function doHide(id) {
+  if (!confirm('Hide this submission?')) return;
+  try {
+    await adminHide(id, true);
+    _subs = _subs.filter(s => s.id !== id);
+    renderAll();
+    toast('Hidden', 'ok');
+  } catch (e) { toast('Hide failed: ' + e.message, 'err'); }
+}
+
+/* ─── Form handlers ──────────────────────────────────────────────────*/
+function setMatchType(mt) {
+  _matchType = mt;
+  document.querySelectorAll('#matchTypeSeg .seg-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mt === mt));
+}
+
+function attachPhoto(file) {
+  if (!file) { _photo = null; return; }
+  if (!/^image\//.test(file.type)) {
+    toast('Only image files are accepted', 'err'); return;
+  }
+  if (file.size > 12 * 1024 * 1024) {
+    toast('File too large (max 12 MB)', 'err'); return;
+  }
+  _photo = { file, mime: file.type, bytes: file.size };
+  const preview = document.getElementById('capturePreview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+  document.getElementById('captureZone').classList.add('loaded');
+  document.getElementById('captureZone').querySelector('.cz-title').textContent = 'Photo attached — tap to retake';
+  document.getElementById('captureZone').querySelector('.cz-sub').textContent = (file.size/1024/1024).toFixed(1) + ' MB · ' + file.type;
+  refreshSubmitBtn();
+  document.getElementById('clearFormBtn').style.display = 'inline-flex';
+}
+
+function clearForm() {
+  _photo = null;
+  document.getElementById('capturePreview').src = '';
+  document.getElementById('capturePreview').style.display = 'none';
+  document.getElementById('captureZone').classList.remove('loaded');
+  document.getElementById('captureZone').querySelector('.cz-title').textContent = 'Take photo / choose image';
+  document.getElementById('captureZone').querySelector('.cz-sub').textContent = 'Camera opens on phones; gallery on desktop.';
+  document.getElementById('photoInput').value = '';
+  document.getElementById('divNum').value = '';
+  document.getElementById('divName').value = '';
+  document.getElementById('weekNo').value = '';
+  document.getElementById('teamA').value = '';
+  document.getElementById('teamB').value = '';
+  document.getElementById('subNotes').value = '';
+  document.getElementById('clearFormBtn').style.display = 'none';
+  refreshSubmitBtn();
+}
+
+function refreshSubmitBtn() {
+  document.getElementById('submitBtn').disabled = !_photo;
+}
+
+async function doSubmit() {
+  if (!_photo) { toast('Attach a photo first', 'err'); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+  try {
+    const storage_path = await uploadPhoto(_photo.file);
+    const payload = {
+      device_id: DEVICE_ID,
+      submitter_name: getNickname() || null,
+      match_type: _matchType,
+      division_number: (document.getElementById('divNum').value || '').trim() || null,
+      division_name:   (document.getElementById('divName').value || '').trim() || null,
+      week_no:         parseInt(document.getElementById('weekNo').value, 10) || null,
+      played_on:       document.getElementById('playedOn').value || null,
+      team_a_number:   (document.getElementById('teamA').value || '').trim() || null,
+      team_b_number:   (document.getElementById('teamB').value || '').trim() || null,
+      notes:           (document.getElementById('subNotes').value || '').trim() || null,
+      storage_path,
+      storage_bucket: BUCKET,
+      image_mime:  _photo.mime,
+      image_bytes: _photo.bytes
+    };
+    const saved = await saveSubmission(payload);
+    if (saved) _subs.unshift(saved);
+    clearForm();
+    renderAll();
+    toast('Submitted ✓', 'ok');
+  } catch (e) {
+    toast('Submit failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+    refreshSubmitBtn();
+  }
+}
+
+/* ─── Toast ──────────────────────────────────────────────────────────*/
+let _toastTimer = null;
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast shown' + (kind ? ' ' + kind : '');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('shown'), 2800);
+}
+
+/* ─── Version auto-update ───────────────────────────────────────────*/
+async function checkVersion() {
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/apps?app_name=eq.' + APP_NAME + '&select=version', { headers: HEADERS_APA });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data && data[0] && data[0].version && data[0].version !== window.APP_VERSION) {
+      document.getElementById('updateOverlay').classList.add('shown');
+      setTimeout(() => location.reload(), 2500);
+    }
+  } catch (_) {}
+}
+
+/* ─── Init ──────────────────────────────────────────────────────────*/
+async function init() {
+  document.title = 'ScoreSheets';
+  document.getElementById('versionLabel').textContent = 'v' + (window.APP_VERSION || '?');
+  checkVersion();
+  setInterval(checkVersion, 30000);
+
+  // Default played_on to today.
+  const today = new Date();
+  document.getElementById('playedOn').value =
+    today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+  document.getElementById('nicknameInput').addEventListener('input', e => setNickname(e.target.value.trim()));
+  document.querySelectorAll('#matchTypeSeg .seg-btn').forEach(b =>
+    b.addEventListener('click', () => setMatchType(b.dataset.mt)));
+  document.getElementById('photoInput').addEventListener('change', e => attachPhoto(e.target.files[0]));
+  document.getElementById('submitBtn').addEventListener('click', doSubmit);
+  document.getElementById('clearFormBtn').addEventListener('click', clearForm);
+  document.querySelectorAll('.tab').forEach(t =>
+    t.addEventListener('click', () => { _filter = t.dataset.filter; renderAll(); }));
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  document.getElementById('lightbox').addEventListener('click', e => {
+    if (e.target.id === 'lightbox') closeLightbox();
+  });
+
+  try { await loadAll(); }
+  catch (e) {
+    document.getElementById('subsRoot').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>';
+  }
+  renderAll();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
