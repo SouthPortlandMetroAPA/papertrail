@@ -759,7 +759,10 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
       <div class="cz-icon">📷</div>
       <div class="cz-title">Take photo of the scoresheet</div>
       <div class="cz-sub">Camera opens on phone; gallery on desktop</div>
-      <input type="file" accept="image/*" capture="environment">
+      <!-- No capture= attr: lets iOS/Android show the chooser
+           (Take Photo / Photo Library / Choose File). With capture=
+           the camera opens directly and the library is skipped.    -->
+      <input type="file" accept="image/*">
     </label>
     <img class="preview-img" id="previewSingle" style="display:none;" alt="">
     <div id="uploadStatus"></div>
@@ -814,9 +817,12 @@ function renderTwoStepUpload(body, modal, match, team, required) {
       <p class="sub">Both pages required — nothing is saved until both are captured.</p>
       <label class="capture-zone" id="czStep">
         <div class="cz-icon">📷</div>
-        <div class="cz-title">Take photo: ${which} page</div>
-        <div class="cz-sub">Camera opens on phone; gallery on desktop</div>
-        <input type="file" accept="image/*" capture="environment">
+        <div class="cz-title">Add ${which} page</div>
+        <div class="cz-sub">Take a new photo or choose one from your library</div>
+        <!-- No capture= attr: lets iOS/Android show the chooser
+           (Take Photo / Photo Library / Choose File). With capture=
+           the camera opens directly and the library is skipped.    -->
+      <input type="file" accept="image/*">
       </label>
       <img class="preview-img" id="previewStep" style="display:none;" alt="">
       <div id="uploadStatus"></div>
