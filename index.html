@@ -441,11 +441,14 @@ async function loadTeamMatches(team) {
     || m.home_team_id === team.team_id
     || m.away_team_id === team.team_id);
 
+  // Per-team scoping: only fetch photos uploaded for THIS captain's team.
+  // Each team owns its own scoresheet; opponent uploads aren't shown.
   const matchIds = myMatches.filter(m => m.row_type === 'regular').map(m => m.id);
   let photos = [];
   if (matchIds.length) {
     photos = await sb('GET', 'papertrail',
-      'photos?select=id,match_id,side,r2_path,uploaded_at' +
+      'photos?select=id,match_id,side,r2_path,uploaded_at,team_id' +
+      '&team_id=eq.' + team.team_id +
       '&match_id=in.(' + matchIds.join(',') + ')') || [];
   }
   const photosByMatch = new Map();
@@ -483,9 +486,12 @@ async function compressImage(file) {
 }
 
 /* ── R2 path + upload ──────────────────────────────────────────────── */
-function r2PathFor(matchId, side) {
-  // Deterministic so re-uploads overwrite — no R2 orphans.
-  return 'papertrail/' + state.session.id + '/' + matchId + '/' + side + '.jpg';
+/* Per-team path so two teams playing the same match each have their
+ * own object — no collisions, no overwrites between teams. Deterministic
+ * within a team so a re-upload by the same captain overwrites cleanly
+ * (no R2 orphans).                                                    */
+function r2PathFor(matchId, teamId, side) {
+  return 'papertrail/' + state.session.id + '/' + matchId + '/' + teamId + '/' + side + '.jpg';
 }
 async function uploadToR2(path, blob) {
   const r = await fetch(R2_URL + '/' + path, {
@@ -497,11 +503,11 @@ async function uploadToR2(path, blob) {
 async function deleteFromR2(path) {
   try { await fetch(R2_URL + '/' + path, { method: 'DELETE' }); } catch (_) {}
 }
-async function recordPhotoInDb(matchId, side, r2Path, meta) {
+async function recordPhotoInDb(matchId, teamId, side, r2Path, meta) {
   return sb('POST', 'papertrail',
-    'photos?on_conflict=match_id,side',
+    'photos?on_conflict=match_id,team_id,side',
     [{
-      match_id: matchId, side, r2_path: r2Path,
+      match_id: matchId, team_id: teamId, side, r2_path: r2Path,
       uploader_apa_number: state.identity && state.identity.apa_number,
       uploader_name:       state.identity && state.identity.name,
       bytes:        meta.bytes,
@@ -790,9 +796,9 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
     body.querySelector('#uploadStatus').innerHTML =
       '<div class="status progress"><span class="spinner"></span>Uploading…</div>';
     try {
-      const path = r2PathFor(match.id, side);
+      const path = r2PathFor(match.id, team.team_id, side);
       await uploadToR2(path, pendingBlob);
-      await recordPhotoInDb(match.id, side, path, pendingMeta);
+      await recordPhotoInDb(match.id, team.team_id, side, path, pendingMeta);
       closeModal();
       toast('Saved');
       render();
@@ -863,9 +869,9 @@ function renderTwoStepUpload(body, modal, match, team, required) {
       try {
         for (const s of required) {
           const c = captures[s];
-          const path = r2PathFor(match.id, s);
+          const path = r2PathFor(match.id, team.team_id, s);
           await uploadToR2(path, c.blob);
-          await recordPhotoInDb(match.id, s, path, c.meta);
+          await recordPhotoInDb(match.id, team.team_id, s, path, c.meta);
         }
         closeModal();
         toast('Saved (front + back)');
