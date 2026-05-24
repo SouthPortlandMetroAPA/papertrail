@@ -171,6 +171,30 @@
   .capture-zone .cz-sub { font-size: 0.78rem; margin-top: 4px; }
   .capture-zone input[type=file] { display: none; }
 
+  /* ── Source picker (two explicit buttons: Camera + Library) ─────────
+     The PoolPics pattern. Android's <input accept="image/*"> behavior
+     varies wildly across OEMs — some surface Camera in the chooser,
+     others open the file manager directly with no Camera option.
+     Two explicit buttons with separate hidden inputs (one with
+     capture="environment", one without) bypasses the chooser entirely
+     and guarantees Camera or Library based on which button was tapped. */
+  .source-picker {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .source-btn {
+    border: 2px dashed var(--border-strong); border-radius: 12px;
+    padding: 22px 10px; text-align: center;
+    background: #fafbfc; cursor: pointer; color: var(--text-dim);
+    font-family: inherit; font-weight: 700;
+    transition: border-color 0.16s, background-color 0.16s, color 0.16s, transform 0.04s;
+  }
+  .source-btn:hover { border-color: var(--spm-blue); background: #eff6ff; color: var(--text); }
+  .source-btn:active { transform: scale(0.99); }
+  .source-btn .source-icon  { font-size: 1.9rem; line-height: 1; margin-bottom: 4px; }
+  .source-btn .source-label { font-size: 0.92rem; font-weight: 800; color: var(--text); }
+  .source-btn .source-sub   { font-size: 0.72rem; font-weight: 500; color: var(--text-dim); margin-top: 2px; }
+  .source-picker input[type=file] { display: none; }
+
   .preview-img {
     width: 100%; max-height: 320px; object-fit: contain;
     border-radius: 10px; background: #000;
@@ -513,6 +537,35 @@ async function loadTeamMatches(team) {
   return { matches: myMatches, photosByMatch };
 }
 
+/* ── Source picker wiring (Camera + Library buttons) ──────────────────
+ * Pattern: one .source-picker root with two buttons (data-source=
+ * "camera"|"library") and two hidden <input type=file> elements
+ * (data-input="camera" with capture="environment", "library" without).
+ * Clicking a button triggers its matching input. Either input's onchange
+ * fires `onPick(file)`. This bypasses Android's unreliable accept-only
+ * chooser sheet — explicit user intent maps directly to camera or
+ * library on every platform.                                          */
+function wireSourcePicker(rootEl, onPick) {
+  const cameraBtn  = rootEl.querySelector('[data-source="camera"]');
+  const libraryBtn = rootEl.querySelector('[data-source="library"]');
+  const cameraIn   = rootEl.querySelector('[data-input="camera"]');
+  const libraryIn  = rootEl.querySelector('[data-input="library"]');
+  if (cameraBtn && cameraIn)   cameraBtn.onclick  = () => cameraIn.click();
+  if (libraryBtn && libraryIn) libraryBtn.onclick = () => libraryIn.click();
+  const handle = async (input) => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try { await onPick(file); } catch (e) {
+      logAction('upload_error', { ok: false, error_message: (e && e.message || String(e)).slice(0, 250) });
+    } finally {
+      // Reset so picking the same file again still fires onchange.
+      try { input.value = ''; } catch (_) {}
+    }
+  };
+  if (cameraIn)  cameraIn.onchange  = () => handle(cameraIn);
+  if (libraryIn) libraryIn.onchange = () => handle(libraryIn);
+}
+
 /* ── Image compression ─────────────────────────────────────────────── */
 async function compressImage(file) {
   let bitmap;
@@ -827,15 +880,20 @@ function modalHeader(match, team) {
 function renderSinglePhotoUpload(body, modal, match, team, side) {
   body.innerHTML = `
     ${modalHeader(match, team)}
-    <label class="capture-zone" id="czSingle">
-      <div class="cz-icon">📷</div>
-      <div class="cz-title">Add scoresheet photo</div>
-      <div class="cz-sub">Take a new photo or choose one from your library</div>
-      <!-- No capture= attr: lets iOS/Android show the chooser
-           (Take Photo / Photo Library / Choose File). With capture=
-           the camera opens directly and the library is skipped.    -->
-      <input type="file" accept="image/*">
-    </label>
+    <div class="source-picker" id="czSingle">
+      <button type="button" class="source-btn" data-source="camera">
+        <div class="source-icon">📷</div>
+        <div class="source-label">Take photo</div>
+        <div class="source-sub">Opens the camera</div>
+      </button>
+      <button type="button" class="source-btn" data-source="library">
+        <div class="source-icon">🖼️</div>
+        <div class="source-label">Choose from library</div>
+        <div class="source-sub">Pick an existing photo</div>
+      </button>
+      <input type="file" accept="image/*" capture="environment" data-input="camera">
+      <input type="file" accept="image/*"                       data-input="library">
+    </div>
     <img class="preview-img" id="previewSingle" style="display:none;" alt="">
     <div id="uploadStatus"></div>
     <div class="btn-row" style="margin-top:14px;">
@@ -843,18 +901,16 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
       <button class="btn btn-primary" id="saveBtn" disabled style="margin-left:auto;">Save</button>
     </div>`;
   let pendingBlob = null, pendingMeta = null;
-  const input = body.querySelector('#czSingle input');
+  const root = body.querySelector('#czSingle');
   const preview = body.querySelector('#previewSingle');
   const saveBtn = body.querySelector('#saveBtn');
-  input.onchange = async () => {
-    const file = input.files && input.files[0];
-    if (!file) return;
+  wireSourcePicker(root, async (file) => {
     const { blob, width, height } = await compressImage(file);
     pendingBlob = blob; pendingMeta = { width, height, bytes: blob.size };
     preview.src = URL.createObjectURL(blob);
     preview.style.display = 'block';
     saveBtn.disabled = false;
-  };
+  });
   body.querySelector('#cancelBtn').onclick = () => closeModal();
   saveBtn.onclick = async () => {
     if (!pendingBlob) return;
@@ -895,15 +951,20 @@ function renderTwoStepUpload(body, modal, match, team, required) {
       ${modalHeader(match, team)}
       <div class="step-pill">Step ${step} of 2 &middot; ${which.toUpperCase()} of scoresheet</div>
       <p class="sub">Both pages required — nothing is saved until both are captured.</p>
-      <label class="capture-zone" id="czStep">
-        <div class="cz-icon">📷</div>
-        <div class="cz-title">Add ${which} page</div>
-        <div class="cz-sub">Take a new photo or choose one from your library</div>
-        <!-- No capture= attr: lets iOS/Android show the chooser
-           (Take Photo / Photo Library / Choose File). With capture=
-           the camera opens directly and the library is skipped.    -->
-      <input type="file" accept="image/*">
-      </label>
+      <div class="source-picker" id="czStep">
+        <button type="button" class="source-btn" data-source="camera">
+          <div class="source-icon">📷</div>
+          <div class="source-label">Take photo</div>
+          <div class="source-sub">${esc(which)} page</div>
+        </button>
+        <button type="button" class="source-btn" data-source="library">
+          <div class="source-icon">🖼️</div>
+          <div class="source-label">Choose from library</div>
+          <div class="source-sub">${esc(which)} page</div>
+        </button>
+        <input type="file" accept="image/*" capture="environment" data-input="camera">
+        <input type="file" accept="image/*"                       data-input="library">
+      </div>
       <img class="preview-img" id="previewStep" style="display:none;" alt="">
       <div id="uploadStatus"></div>
       <div class="btn-row" style="margin-top:14px;">
@@ -919,18 +980,16 @@ function renderTwoStepUpload(body, modal, match, team, required) {
       prev.style.display = 'block';
       body.querySelector('#nextBtn').disabled = false;
     }
-    const input = body.querySelector('#czStep input');
+    const root = body.querySelector('#czStep');
     const preview = body.querySelector('#previewStep');
     const nextBtn = body.querySelector('#nextBtn');
-    input.onchange = async () => {
-      const file = input.files && input.files[0];
-      if (!file) return;
+    wireSourcePicker(root, async (file) => {
       const { blob, width, height } = await compressImage(file);
       captures[which] = { blob, meta: { width, height, bytes: blob.size } };
       preview.src = URL.createObjectURL(blob);
       preview.style.display = 'block';
       nextBtn.disabled = false;
-    };
+    });
     body.querySelector('#cancelBtn').onclick = () => {
       if (step === 1) closeModal();
       else { step = 1; renderStep(); }
