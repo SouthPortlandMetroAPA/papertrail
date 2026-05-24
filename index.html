@@ -545,10 +545,10 @@ function renderIdentityForm() {
   return `
     <div class="card id-card">
       <h2>Welcome, Captain</h2>
-      <p>Enter your APA number — or the email APA has on file for you — to find your Masters and Doubles teams.</p>
+      <p>Enter your APA number (full 8-digit form like <code>97225719</code>, OR the 5-digit local form like <code>25719</code>) — or the email APA has on file for you. We'll find your Masters and Doubles teams.</p>
       <div class="id-input-row">
         <input id="idInput" class="id-input" type="text" inputmode="text" autocomplete="off"
-          placeholder="APA# or email" autocapitalize="none" autocorrect="off">
+          placeholder="APA# (8 or 5 digit) or email" autocapitalize="none" autocorrect="off">
         <button class="btn btn-primary" id="idGo">Find</button>
       </div>
       <div id="idStatus" style="margin-top:10px;"></div>
