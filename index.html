@@ -4,289 +4,271 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ea002a">
-<title>ScoreSheets</title>
+<title>PaperTrail</title>
+<meta name="description" content="Photograph your APA Masters / Doubles scoresheets — South Portland Metro APA">
 <style>
   :root {
-    --spm-red:    #ea002a;
-    --spm-blue:   #0031a1;
-    --text:       #111827;
-    --text-dim:   #6b7280;
-    --border:     #e5e7eb;
-    --bg:         #f9fafb;
-    --bg-card:    #ffffff;
-    --ok:         #16a34a;
-    --warn:       #ca8a04;
-    --bad:        #dc2626;
+    --spm-red:   #ea002a;
+    --spm-blue:  #0031a1;
+    --text:      #111827;
+    --text-dim:  #6b7280;
+    --border:    #e5e7eb;
+    --border-strong: #d1d5db;
+    --bg:        #f3f4f6;
+    --bg-card:   #ffffff;
+    --ok:        #16a34a;
+    --warn:      #ca8a04;
+    --bad:       #dc2626;
+    --radius:    14px;
+    --pill:      999px;
   }
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    color: var(--text); background: var(--bg);
-    line-height: 1.5; min-height: 100vh;
-    -webkit-text-size-adjust: 100%;
+    color: var(--text); background: var(--bg); line-height: 1.5;
+    min-height: 100vh; -webkit-text-size-adjust: 100%;
+    padding-bottom: 32px;
   }
+
+  /* ── Header ───────────────────────────────────────────────────── */
   .header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px;
-    background: linear-gradient(90deg, var(--spm-red) 0%, var(--spm-blue) 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--spm-red) 0%, var(--spm-blue) 100%);
+    color: #fff; padding: 16px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }
-  .header h1 { font-size: 1.15rem; font-weight: 800; margin: 0; }
-  .header .ver { font-size: 0.78rem; opacity: 0.85; }
-  main { max-width: 720px; margin: 0 auto; padding: 14px; }
+  .header-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .header h1 { font-size: 1.15rem; font-weight: 900; margin: 0; letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; }
+  .header h1 .brand-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
+  .header .who { font-size: 0.78rem; opacity: 0.92; text-align: right; }
+  .header .who a { color: #fff; text-decoration: underline; cursor: pointer; opacity: 0.85; }
+  .header .who a:hover { opacity: 1; }
+
+  /* ── Main container ───────────────────────────────────────────── */
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
 
   .card {
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    border-radius: var(--radius); padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
-  .card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 800; }
+  .card h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 800; }
 
-  /* Form */
-  label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--text-dim); margin-bottom: 2px; }
-  input[type=text], input[type=number], input[type=date], select, textarea {
-    width: 100%; font: inherit; font-size: 1rem;
-    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  .hint { color: var(--text-dim); font-size: 0.86rem; }
+
+  /* ── Identity form ────────────────────────────────────────────── */
+  .id-card { text-align: center; }
+  .id-card h2 { font-size: 1.2rem; margin-bottom: 6px; }
+  .id-card p { color: var(--text-dim); font-size: 0.92rem; margin: 0 0 14px; }
+  .id-input-row { display: flex; gap: 8px; }
+  .id-input {
+    flex: 1; font: inherit; font-size: 1rem; padding: 12px 14px;
+    border: 1.5px solid var(--border-strong); border-radius: 10px;
     background: #fff; color: var(--text);
   }
-  textarea { resize: vertical; min-height: 50px; }
-  .row { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin-bottom: 8px; }
-  .row.full { grid-template-columns: 1fr; }
-  .row.three { grid-template-columns: 1fr 1fr 1fr; }
-  @media (max-width: 480px) {
-    .row.three { grid-template-columns: 1fr 1fr; }
-  }
-
-  .seg {
-    display: flex; gap: 4px; padding: 3px; border-radius: 10px;
-    background: #f3f4f6; border: 1px solid var(--border);
-  }
-  .seg-btn {
-    flex: 1; padding: 9px 8px; border: 0; background: transparent;
-    font: inherit; font-weight: 700; font-size: 0.92rem; color: var(--text-dim);
-    border-radius: 7px; cursor: pointer;
-  }
-  .seg-btn.active { background: #fff; color: var(--spm-blue); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-
-  /* Camera capture */
-  .capture-zone {
-    border: 2px dashed var(--border); border-radius: 12px;
-    padding: 22px 12px; text-align: center;
-    background: #fafbfc; cursor: pointer;
-    transition: border-color 120ms, background-color 120ms;
-  }
-  .capture-zone:hover, .capture-zone.dragover {
-    border-color: var(--spm-blue); background: #eff6ff;
-  }
-  .capture-zone.loaded { border-style: solid; border-color: var(--ok); background: #f0fdf4; padding: 8px; }
-  .capture-zone input[type=file] { display: none; }
-  .capture-zone .cz-title { font-weight: 800; font-size: 1.02rem; }
-  .capture-zone .cz-sub { font-size: 0.88rem; color: var(--text-dim); margin-top: 4px; }
-  .capture-zone .cz-camera-svg {
-    width: 38px; height: 38px; opacity: 0.6; margin-bottom: 6px;
-  }
-  .capture-preview { max-width: 100%; max-height: 360px; border-radius: 8px; display: block; margin: 0 auto; }
-
+  .id-input:focus { outline: none; border-color: var(--spm-blue); }
   .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    gap: 6px; font: inherit; font-weight: 800; font-size: 1rem;
-    padding: 12px 18px; border-radius: 10px;
-    background: var(--spm-blue); color: #fff;
-    border: 1px solid var(--spm-blue); cursor: pointer;
-    width: 100%;
+    padding: 11px 18px; border-radius: var(--pill);
+    font-size: 0.92rem; font-weight: 800; border: 0; cursor: pointer;
+    font-family: inherit;
   }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn.secondary { background: #fff; color: var(--spm-blue); }
-  .btn.danger    { background: #fff; color: var(--spm-red); border-color: var(--spm-red); }
-  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .btn-primary { background: var(--spm-blue); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #0046cc; }
+  .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+  .btn-outline { background: #fff; border: 1.5px solid var(--border-strong); color: var(--text); }
+  .btn-outline:hover { background: #f9fafb; }
+  .btn-danger { background: var(--bad); color: #fff; }
+  .btn-danger:hover { opacity: 0.92; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-  /* Submission list */
-  .submissions { display: flex; flex-direction: column; gap: 8px; }
-  .sub {
-    display: grid; grid-template-columns: 60px 1fr auto; gap: 10px;
-    padding: 8px;
-    border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  /* ── Team buttons ─────────────────────────────────────────────── */
+  .team-buttons { display: grid; gap: 10px; }
+  .team-btn {
+    background: var(--bg-card); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    cursor: pointer; text-align: left;
+    transition: box-shadow 0.16s ease, transform 0.05s;
+    display: flex; align-items: center; gap: 12px;
+    font-family: inherit;
   }
-  .sub-thumb {
-    width: 60px; height: 60px; object-fit: cover;
-    border-radius: 6px; background: #f3f4f6; cursor: pointer;
+  .team-btn:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.06); border-color: var(--border-strong); }
+  .team-btn:active { transform: scale(0.998); }
+  .team-btn .tb-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--spm-red), var(--spm-blue));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.86rem; flex-shrink: 0;
   }
-  .sub-meta-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .sub-tag {
-    display: inline-block; padding: 1px 6px; border-radius: 8px;
-    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase;
-  }
-  .sub-tag.masters { background: #ede9fe; color: #5b21b6; }
-  .sub-tag.doubles { background: #cffafe; color: #155e75; }
-  .sub-tag.other   { background: #f3f4f6; color: var(--text-dim); }
-  .sub-when { color: var(--text-dim); font-size: 0.85rem; }
-  .sub-meta { font-size: 0.88rem; color: var(--text-dim); margin-top: 2px; }
-  .sub-meta .strong { color: var(--text); font-weight: 700; }
-  .sub-actions { display: flex; gap: 4px; }
-  .icon-btn { background: transparent; border: 0; padding: 4px; cursor: pointer; color: var(--text-dim); border-radius: 4px; }
-  .icon-btn:hover { background: #f3f4f6; color: var(--text); }
-  .icon-btn.danger:hover { color: var(--spm-red); }
-  .icon-btn svg { width: 18px; height: 18px; }
+  .team-btn .tb-text { flex: 1; min-width: 0; }
+  .team-btn .tb-name { font-size: 1.02rem; font-weight: 800; line-height: 1.25; }
+  .team-btn .tb-meta { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
+  .team-btn .tb-arrow { color: var(--text-dim); font-size: 1.2rem; flex-shrink: 0; }
 
-  /* Filter tabs */
-  .tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
-  .tab {
-    flex: 1; min-width: 70px; text-align: center;
-    padding: 6px 10px; font-size: 0.88rem; font-weight: 700;
-    border: 1px solid var(--border); background: #fff; color: var(--text);
-    border-radius: 8px; cursor: pointer;
-  }
-  .tab.active { background: var(--spm-blue); color: #fff; border-color: var(--spm-blue); }
+  /* ── Match grid ───────────────────────────────────────────────── */
+  .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 0.88rem; font-weight: 700; cursor: pointer; text-decoration: none; margin-bottom: 6px; }
+  .back-link:hover { color: var(--text); }
 
-  /* Lightbox */
+  .match-list { display: flex; flex-direction: column; gap: 6px; }
+  .match-row {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 12px;
+    display: grid; grid-template-columns: 38px 1fr auto; gap: 10px;
+    align-items: center; cursor: pointer;
+    transition: background 0.12s;
+    font-family: inherit; text-align: left;
+    border-left-width: 4px;
+  }
+  .match-row.uploaded { border-left-color: var(--ok); }
+  .match-row.missing  { border-left-color: var(--bad); }
+  .match-row.playoff,
+  .match-row.no_play,
+  .match-row.bye      { border-left-color: var(--text-dim); cursor: default; opacity: 0.78; }
+  .match-row:hover:not(.playoff):not(.no_play):not(.bye) { background: #f9fafb; }
+  .match-week { font-size: 0.82rem; font-weight: 800; color: var(--spm-blue); }
+  .match-meta { min-width: 0; }
+  .match-line1 { font-size: 0.96rem; font-weight: 700; line-height: 1.3; }
+  .match-line2 { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+  .match-state { font-size: 1.4rem; line-height: 1; padding-right: 4px; flex-shrink: 0; }
+  .match-state.ok  { color: var(--ok); }
+  .match-state.bad { color: var(--bad); }
+  .match-state.dim { color: var(--text-dim); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ── Upload modal ─────────────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; z-index: 100;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: var(--radius);
+    max-width: 480px; width: 100%; max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    padding: 18px 18px 16px;
+  }
+  .modal h3 { margin: 0 0 6px; font-size: 1.1rem; font-weight: 800; }
+  .modal .sub { color: var(--text-dim); font-size: 0.86rem; margin: 0 0 14px; }
+
+  .step-pill {
+    display: inline-block; padding: 3px 10px; border-radius: var(--pill);
+    background: #eff6ff; color: var(--spm-blue); font-size: 0.74rem; font-weight: 800;
+    margin-bottom: 8px; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  .capture-zone {
+    border: 2px dashed var(--border-strong); border-radius: 12px;
+    padding: 28px 14px; text-align: center;
+    background: #fafbfc; cursor: pointer;
+    transition: border-color 0.16s, background-color 0.16s;
+    color: var(--text-dim);
+    display: block;
+  }
+  .capture-zone:hover { border-color: var(--spm-blue); background: #eff6ff; color: var(--text); }
+  .capture-zone .cz-icon { font-size: 2rem; margin-bottom: 6px; }
+  .capture-zone .cz-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+  .capture-zone .cz-sub { font-size: 0.78rem; margin-top: 4px; }
+  .capture-zone input[type=file] { display: none; }
+
+  .preview-img {
+    width: 100%; max-height: 320px; object-fit: contain;
+    border-radius: 10px; background: #000;
+    margin-top: 10px;
+  }
+
+  .photo-grid { display: grid; gap: 10px; }
+  .photo-grid .ph {
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    background: #fff;
+  }
+  .photo-grid .ph-img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; cursor: zoom-in; background: #000; }
+  .photo-grid .ph-foot { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; }
+  .photo-grid .ph-label { font-size: 0.82rem; font-weight: 700; }
+  .photo-grid .ph-label .side { color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.04em; }
+
+  .status { font-size: 0.86rem; padding: 8px 12px; border-radius: 8px; margin-top: 8px; }
+  .status.progress { background: #eff6ff; color: var(--spm-blue); }
+  .status.error    { background: #fef2f2; color: var(--bad); }
+  .status.ok       { background: #f0fdf4; color: var(--ok); }
+
+  /* ── Lightbox (zoom photo) ─────────────────────────────────────── */
   .lightbox {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.92);
-    display: none; align-items: center; justify-content: center;
-    z-index: 9999; padding: 16px;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+    display: none; z-index: 200;
+    align-items: center; justify-content: center;
   }
-  .lightbox.shown { display: flex; }
-  .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 8px; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 96vw; max-height: 96vh; object-fit: contain; }
   .lightbox-close {
-    position: absolute; top: 14px; right: 14px;
-    background: rgba(0,0,0,0.5); color: #fff; border: 0;
-    width: 38px; height: 38px; border-radius: 50%; font-size: 22px;
-    cursor: pointer;
+    position: absolute; top: 12px; right: 16px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: 0; color: #fff;
+    font-size: 1.6rem; cursor: pointer;
   }
 
-  .empty { text-align: center; padding: 30px 14px; color: var(--text-dim); font-size: 0.95rem; }
-
-  .toast {
-    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-    background: var(--text); color: #fff; padding: 10px 18px;
-    border-radius: 8px; font-size: 0.92rem; font-weight: 600;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.25);
-    z-index: 1000; opacity: 0; transition: opacity 200ms; max-width: 92vw;
-  }
-  .toast.shown { opacity: 1; }
-  .toast.err   { background: var(--spm-red); }
-  .toast.ok    { background: var(--ok); }
-
+  /* ── Auto-update overlay ───────────────────────────────────────── */
   .update-overlay {
-    position: fixed; inset: 0; background: rgba(15,23,42,0.85);
-    display: none; align-items: center; justify-content: center;
-    z-index: 9000; color: #fff; text-align: center; padding: 24px;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; z-index: 300;
+    align-items: center; justify-content: center; padding: 16px;
   }
-  .update-overlay.shown { display: flex; }
-  .update-overlay .uo-card {
-    background: var(--bg-card); color: var(--text);
-    border-radius: 14px; padding: 22px; max-width: 380px;
+  .update-overlay.open { display: flex; }
+  .uo-card {
+    background: #fff; padding: 22px 26px; border-radius: var(--radius);
+    text-align: center; max-width: 360px;
   }
 
-  .id-strip {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    font-size: 0.85rem; color: var(--text-dim);
+  /* ── Toast ─────────────────────────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: #1f2937; color: #fff; padding: 11px 18px;
+    border-radius: var(--pill); font-size: 0.88rem; font-weight: 700;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25); z-index: 250;
+    opacity: 0; pointer-events: none; transition: opacity 0.18s;
   }
-  .id-strip input { flex: 1; min-width: 140px; padding: 6px 10px; font-size: 0.92rem; }
+  .toast.show { opacity: 1; }
+
+  /* ── Loading spinner ───────────────────────────────────────────── */
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: -3px; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>ScoreSheets</h1>
-  <div class="ver" id="versionLabel"></div>
-</div>
-
-<main>
-  <!-- Identity strip -->
-  <div class="card">
-    <div class="id-strip">
-      <label for="nicknameInput" style="margin:0;">Your name</label>
-      <input type="text" id="nicknameInput" placeholder="(optional — saved on this device)">
-      <span id="deviceLabel" style="font-size:0.74rem;"></span>
-    </div>
+<header class="header">
+  <div class="header-inner">
+    <h1><span class="brand-dot"></span>PaperTrail</h1>
+    <div class="who" id="whoBlock"></div>
   </div>
+</header>
 
-  <!-- Upload form -->
-  <div class="card">
-    <h2 id="formTitle">Submit scoresheet photo</h2>
-
-    <div style="margin-bottom: 10px;">
-      <label>Match type</label>
-      <div class="seg" id="matchTypeSeg">
-        <button type="button" class="seg-btn active" data-mt="masters">Masters</button>
-        <button type="button" class="seg-btn" data-mt="doubles">Doubles</button>
-        <button type="button" class="seg-btn" data-mt="other">Other</button>
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label for="divNum">Division #</label>
-        <input type="text" id="divNum" placeholder="e.g. 042" inputmode="numeric">
-      </div>
-      <div>
-        <label for="divName">Division name</label>
-        <input type="text" id="divName" placeholder="e.g. Mid-West Masters" list="divNameList">
-        <datalist id="divNameList"></datalist>
-      </div>
-    </div>
-
-    <div class="row three">
-      <div>
-        <label for="weekNo">Week</label>
-        <input type="number" id="weekNo" min="1" max="20" inputmode="numeric" placeholder="1-20">
-      </div>
-      <div>
-        <label for="playedOn">Played on</label>
-        <input type="date" id="playedOn">
-      </div>
-      <div></div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label for="teamA">Team A</label>
-        <input type="text" id="teamA" placeholder="e.g. 04203" inputmode="numeric">
-      </div>
-      <div>
-        <label for="teamB">Team B</label>
-        <input type="text" id="teamB" placeholder="opponent" inputmode="numeric">
-      </div>
-    </div>
-
-    <div class="row full">
-      <div>
-        <label for="subNotes">Notes</label>
-        <textarea id="subNotes" placeholder="(optional)"></textarea>
-      </div>
-    </div>
-
-    <label style="margin-top:4px;">Photo</label>
-    <label class="capture-zone" id="captureZone">
-      <svg class="cz-camera-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-        <circle cx="12" cy="13" r="4"/>
-      </svg>
-      <div class="cz-title">Take photo / choose image</div>
-      <div class="cz-sub">Camera opens on phones; gallery on desktop.</div>
-      <input type="file" id="photoInput" accept="image/*" capture="environment">
-    </label>
-    <img id="capturePreview" class="capture-preview" style="display:none; margin-top:10px;" alt="">
-
-    <div class="btn-row" style="margin-top:14px;">
-      <button type="button" class="btn" id="submitBtn" disabled>Submit</button>
-      <button type="button" class="btn secondary" id="clearFormBtn" style="display:none;">Clear form</button>
-    </div>
-  </div>
-
-  <!-- Recent submissions -->
-  <div class="card">
-    <h2>Recent submissions</h2>
-    <div class="tabs" id="filterTabs">
-      <button type="button" class="tab active" data-filter="all">All</button>
-      <button type="button" class="tab" data-filter="masters">Masters</button>
-      <button type="button" class="tab" data-filter="doubles">Doubles</button>
-      <button type="button" class="tab" data-filter="mine">Mine</button>
-    </div>
-    <div class="submissions" id="subsRoot"></div>
-  </div>
+<main id="root">
+  <!-- Rendered by JS -->
 </main>
 
+<!-- Upload modal -->
+<div class="modal-backdrop" id="uploadModal" role="dialog" aria-modal="true">
+  <div class="modal" id="uploadModalBody"><!-- rendered by JS --></div>
+</div>
+
+<!-- Delete-confirm modal -->
+<div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true">
+  <div class="modal" id="confirmModalBody"><!-- rendered by JS --></div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close">×</button>
+  <img id="lightboxImg" alt="">
+</div>
+
+<!-- Auto-update overlay -->
 <div class="update-overlay" id="updateOverlay">
   <div class="uo-card">
     <h2 style="margin:0 0 8px;font-size:1.05rem;">New version available</h2>
@@ -294,11 +276,7 @@
   </div>
 </div>
 
-<div class="lightbox" id="lightbox">
-  <button class="lightbox-close" id="lightboxClose">×</button>
-  <img id="lightboxImg" alt="">
-</div>
-
+<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script src="version.js?_=__TS__"></script>
@@ -311,333 +289,734 @@
 
 <script>
 /* ════════════════════════════════════════════════════════════════════════
-   ScoreSheets — phone-uploaded scoresheet photos for masters/doubles.
-   Storage: Supabase Storage 'scoresheets' bucket (public read URLs).
-   Data:    scoresheets.submissions
-   Auth:    anon for submit + browse; ?key=<service_role> for hide/delete.
+   PaperTrail v1.0 — captain-facing scoresheet photo uploader.
+
+   FLOW:
+     1. Captain enters APA# (or email) → resolves to slate.players row.
+     2. Show buttons for every team they're on this session that's
+        Masters / 8-Ball Doubles / 9-Ball Doubles (paper-scored formats).
+     3. Tap team → show match list for the session (week 1 → N).
+     4. Tap match → upload modal (single photo OR atomic 2-step front+back).
+     5. Existing photos → view + delete-with-confirmation.
+
+   STORAGE:
+     • Schedule + teams + players: Supabase (slate schema).
+     • Photo objects: Cloudflare R2 via apa-photos.spmapa.workers.dev.
+     • Photo index:  papertrail.photos (1 row per uploaded image).
+
+   TRUST: no auth. Anyone with any APA# can do anything. localStorage
+   remembers the last entered identity so captains only type it once.
    ════════════════════════════════════════════════════════════════════════ */
-const APP_NAME = 'ScoreSheets';
-const SB_URL   = 'https://dqzbekoaysgaiqljueac.supabase.co';
-const SB_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxemJla29heXNnYWlxbGp1ZWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzA5NzgsImV4cCI6MjA5MDc0Njk3OH0.cCdGxZ4zEFzU_r6lWSDeoNWG67Q4MSYCAtpds035dfU';
-const SCHEMA   = 'scoresheets';
-const BUCKET   = 'scoresheets';
 
-const URL_PARAMS = new URLSearchParams(location.search);
-const SB_KEY  = URL_PARAMS.get('key') || '';
-const IS_ADMIN = !!SB_KEY;
+const APP_NAME    = 'PaperTrail';
+const SB_URL      = 'https://dqzbekoaysgaiqljueac.supabase.co';
+const SB_ANON     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxemJla29heXNnYWlxbGp1ZWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzA5NzgsImV4cCI6MjA5MDc0Njk3OH0.cCdGxZ4zEFzU_r6lWSDeoNWG67Q4MSYCAtpds035dfU';
+const R2_URL      = 'https://apa-photos.spmapa.workers.dev';
+const SPM_OPERATOR_ID = 1;
 
-const HEADERS_READ  = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Accept-Profile': SCHEMA };
-const HEADERS_WRITE = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON,
-  'Content-Type': 'application/json', 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA,
-  Prefer: 'return=representation' };
-const HEADERS_ADMIN = IS_ADMIN ? { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY,
-  'Content-Type': 'application/json', 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA,
-  Prefer: 'return=representation' } : null;
-const HEADERS_APA   = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Accept-Profile': 'apa_core' };
+const FORMATS_WITH_PHOTOS = {
+  'Masters':         { photos: ['single'], label: 'Masters' },
+  '8-Ball Doubles':  { photos: ['single'], label: '8-Ball Doubles' },
+  '9-Ball Doubles':  { photos: ['front', 'back'], label: '9-Ball Doubles' }
+};
+const PAPERTRAIL_FORMATS = Object.keys(FORMATS_WITH_PHOTOS);
 
-/* ─── Device identity (Snapshot/CoastalCritters pattern) ─────────────*/
-function getDeviceId() {
-  let id = localStorage.getItem('scoresheets.device_id');
-  if (!id) {
-    id = (crypto.randomUUID && crypto.randomUUID())
-      || ('cid-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,10));
-    try { localStorage.setItem('scoresheets.device_id', id); }
-    catch (_) { id = 'nostorage-' + id; }
-  }
-  return id;
+/* Compression: max-2000px, JPEG q=0.80, ~300 KB target */
+const COMPRESS_MAX_DIM = 2000;
+const COMPRESS_QUALITY = 0.80;
+
+/* ── State ─────────────────────────────────────────────────────────── */
+const state = {
+  identity: null,           // { apa_number, name, email } or null
+  session: null,            // { id, name } current session
+  view:    'home',          // 'home' | 'team'
+  teamCtx: null             // selected team object when viewing matches
+};
+
+/* ── Supabase REST helpers ─────────────────────────────────────────── */
+function sbHeaders(schema) {
+  return {
+    apikey: SB_ANON,
+    Authorization: 'Bearer ' + SB_ANON,
+    'Accept-Profile':  schema,
+    'Content-Profile': schema
+  };
 }
-function getNickname() { return localStorage.getItem('scoresheets.nickname') || ''; }
-function setNickname(s) { try { localStorage.setItem('scoresheets.nickname', s); } catch (_) {} }
-const DEVICE_ID = getDeviceId();
-
-/* ─── State ──────────────────────────────────────────────────────────*/
-let _subs    = [];
-let _matchType = 'masters';
-let _filter  = 'all';
-let _photo   = null;       // { file, mime, bytes }
-
-/* ─── Supabase REST helpers ─────────────────────────────────────────*/
-async function sb(method, path, body, headers) {
-  const opts = { method, headers: { ...(headers || (method === 'GET' ? HEADERS_READ : HEADERS_WRITE)) } };
-  if (body !== undefined) opts.body = JSON.stringify(body);
-  const r = await fetch(SB_URL + '/rest/v1/' + path, opts);
-  if (!r.ok) {
-    const txt = await r.text();
-    throw new Error('Supabase ' + r.status + ': ' + txt.slice(0,300));
+async function sb(method, schema, path, body) {
+  const headers = { ...sbHeaders(schema) };
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    headers['Prefer']       = 'return=representation';
   }
-  if (r.status === 204) return null;
-  return (r.headers.get('Content-Type') || '').includes('json') ? r.json() : r.text();
-}
-
-/* ─── Storage upload ──────────────────────────────────────────────────
-   We use the basic Storage REST API: POST /storage/v1/object/<bucket>/<path>
-   with the raw bytes + content type. Anon role + storage RLS policy
-   "scoresheets_anon_insert" allows this. */
-async function uploadPhoto(file) {
-  const ext = (file.name || '').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-  const rand = Math.random().toString(36).slice(2, 10);
-  const path = 'submissions/' + DEVICE_ID + '/' + Date.now() + '-' + rand + '.' + ext;
-  const url  = SB_URL + '/storage/v1/object/' + BUCKET + '/' + encodeURIComponent(path);
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON,
-               'Content-Type': file.type || 'image/jpeg', 'x-upsert': 'false' },
-    body: file
+  const r = await fetch(SB_URL + '/rest/v1/' + path, {
+    method, headers, body: body !== undefined ? JSON.stringify(body) : undefined
   });
   if (!r.ok) {
     const t = await r.text();
-    throw new Error('Storage ' + r.status + ': ' + t.slice(0, 250));
+    throw new Error(`${method} ${schema}.${path}: ${r.status} ${t.slice(0,200)}`);
   }
-  return path;
-}
-function publicUrlFor(path, bucket) {
-  return SB_URL + '/storage/v1/object/public/' + (bucket || BUCKET) + '/' + path;
-}
-
-/* ─── Data load + save ───────────────────────────────────────────────*/
-async function loadAll() {
-  _subs = await sb('GET', 'submissions?select=*&order=created_at.desc&limit=200') || [];
+  if (r.status === 204) return null;
+  const ct = r.headers.get('content-type') || '';
+  return ct.includes('json') ? r.json() : r.text();
 }
 
-async function saveSubmission(payload) {
-  const created = await sb('POST', 'submissions', payload);
-  return created && created[0];
+/* ── Identity persistence ──────────────────────────────────────────── */
+function loadIdentity() {
+  try {
+    const raw = localStorage.getItem('papertrail.identity');
+    if (raw) state.identity = JSON.parse(raw);
+  } catch (_) {}
+}
+function saveIdentity(id) {
+  state.identity = id;
+  try { localStorage.setItem('papertrail.identity', JSON.stringify(id)); } catch (_) {}
+}
+function clearIdentity() {
+  state.identity = null;
+  state.teamCtx = null;
+  state.view = 'home';
+  try { localStorage.removeItem('papertrail.identity'); } catch (_) {}
 }
 
-async function adminHide(id, hide) {
-  if (!HEADERS_ADMIN) throw new Error('Admin key required');
-  return sb('PATCH', 'submissions?id=eq.' + id, { hidden: !!hide }, HEADERS_ADMIN);
+/* ── Player lookup ─────────────────────────────────────────────────── */
+async function lookupPlayer(input) {
+  const v = input.trim();
+  if (!v) return null;
+  const isEmail = v.includes('@');
+  const filter = isEmail
+    ? 'email=ilike.' + encodeURIComponent(v)
+    : 'member_number=eq.' + encodeURIComponent(v);
+  const rows = await sb('GET', 'slate',
+    'players?select=member_number,first_name,last_name,nickname,email&' + filter + '&limit=1');
+  if (!rows || rows.length === 0) return null;
+  const p = rows[0];
+  const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
+            || p.nickname || p.member_number;
+  return { apa_number: p.member_number, name, email: p.email };
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────*/
-function esc(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-function fmtDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-}
-function fmtCreated(iso) {
-  const d = new Date(iso);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const that = new Date(d); that.setHours(0,0,0,0);
-  const diff = Math.round((today - that) / 86400000);
-  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  if (diff === 0) return 'today ' + t;
-  if (diff === 1) return 'yesterday ' + t;
-  if (diff < 7)   return d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t;
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+/* ── Current session ───────────────────────────────────────────────── */
+async function loadCurrentSession() {
+  if (state.session) return state.session;
+  const rows = await sb('GET', 'slate',
+    'sessions?select=id,name&is_current=eq.true&limit=1');
+  if (!rows || rows.length === 0) throw new Error('No current session');
+  state.session = rows[0];
+  return state.session;
 }
 
-/* ─── Render ─────────────────────────────────────────────────────────*/
-function renderAll() {
-  document.getElementById('nicknameInput').value = getNickname();
-  document.getElementById('deviceLabel').textContent = '· device ' + DEVICE_ID.slice(0, 8);
-  // Datalist of division names from past submissions for autocomplete.
-  const divs = [...new Set(_subs.map(s => s.division_name).filter(Boolean))];
-  document.getElementById('divNameList').innerHTML =
-    divs.map(d => '<option value="' + esc(d) + '">').join('');
-  // Filter + render submissions.
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.filter === _filter));
-  let list = _subs;
-  if (_filter === 'masters' || _filter === 'doubles') list = list.filter(s => s.match_type === _filter);
-  else if (_filter === 'mine')                          list = list.filter(s => s.device_id === DEVICE_ID);
-  const root = document.getElementById('subsRoot');
-  if (list.length === 0) {
-    root.innerHTML = '<div class="empty">No submissions yet.</div>';
+/* ── Player → teams (Masters + Doubles only, current SPM session) ── */
+async function loadMyTeams(apaNumber) {
+  await loadCurrentSession();
+  const select = 'team_id,role,team:teams!inner(' +
+    'id,team_number,team_name,division_id,' +
+    'division:divisions!inner(id,division_number,name,format,session_id,operator_id,night_of_play))';
+  const rows = await sb('GET', 'slate',
+    'team_memberships?select=' + select +
+    '&member_number=eq.' + encodeURIComponent(apaNumber));
+  if (!rows) return [];
+  const sessionId = state.session.id;
+  return rows
+    .filter(r =>
+      r.team && r.team.division
+      && r.team.division.session_id  === sessionId
+      && r.team.division.operator_id === SPM_OPERATOR_ID
+      && PAPERTRAIL_FORMATS.includes(r.team.division.format))
+    .map(r => ({
+      role:            r.role,
+      team_id:         r.team.id,
+      team_number:     r.team.team_number,
+      team_name:       r.team.team_name,
+      division_id:     r.team.division.id,
+      division_number: r.team.division.division_number,
+      division_name:   r.team.division.name,
+      format:          r.team.division.format,
+      night_of_play:   r.team.division.night_of_play
+    }))
+    .reduce((acc, t) => {  // de-dup if captain+co-captain double-rows
+      if (!acc.find(x => x.team_id === t.team_id)) acc.push(t);
+      return acc;
+    }, [])
+    .sort((a, b) => a.division_number.localeCompare(b.division_number));
+}
+
+/* ── Matches + photos for a team ───────────────────────────────────── */
+async function loadTeamMatches(team) {
+  const select = 'id,week_number,match_index,scheduled_date,row_type,' +
+    'home_team_id,away_team_id,label,' +
+    'home_team:teams!matches_home_team_id_fkey(team_name,team_number),' +
+    'away_team:teams!matches_away_team_id_fkey(team_name,team_number)';
+  const matches = await sb('GET', 'slate',
+    'matches?select=' + select +
+    '&division_id=eq.' + team.division_id +
+    '&order=scheduled_date.asc,week_number.asc,match_index.asc');
+
+  // Filter: only matches involving THIS team, OR division-wide rows (playoff/no_play)
+  const myMatches = (matches || []).filter(m =>
+    m.row_type !== 'regular'
+    || m.home_team_id === team.team_id
+    || m.away_team_id === team.team_id);
+
+  const matchIds = myMatches.filter(m => m.row_type === 'regular').map(m => m.id);
+  let photos = [];
+  if (matchIds.length) {
+    photos = await sb('GET', 'papertrail',
+      'photos?select=id,match_id,side,r2_path,uploaded_at' +
+      '&match_id=in.(' + matchIds.join(',') + ')') || [];
+  }
+  const photosByMatch = new Map();
+  for (const p of photos) {
+    if (!photosByMatch.has(p.match_id)) photosByMatch.set(p.match_id, []);
+    photosByMatch.get(p.match_id).push(p);
+  }
+  return { matches: myMatches, photosByMatch };
+}
+
+/* ── Image compression ─────────────────────────────────────────────── */
+async function compressImage(file) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    bitmap = img;
+  }
+  let w = bitmap.width, h = bitmap.height;
+  const dim = Math.max(w, h);
+  if (dim > COMPRESS_MAX_DIM) {
+    const scale = COMPRESS_MAX_DIM / dim;
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  const blob = await new Promise(res =>
+    canvas.toBlob(res, 'image/jpeg', COMPRESS_QUALITY));
+  return { blob, width: w, height: h };
+}
+
+/* ── R2 path + upload ──────────────────────────────────────────────── */
+function r2PathFor(matchId, side) {
+  // Deterministic so re-uploads overwrite — no R2 orphans.
+  return 'papertrail/' + state.session.id + '/' + matchId + '/' + side + '.jpg';
+}
+async function uploadToR2(path, blob) {
+  const r = await fetch(R2_URL + '/' + path, {
+    method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob
+  });
+  if (!r.ok) throw new Error('R2 upload failed: ' + r.status + ' ' + (await r.text()).slice(0, 200));
+  return r.json();
+}
+async function deleteFromR2(path) {
+  try { await fetch(R2_URL + '/' + path, { method: 'DELETE' }); } catch (_) {}
+}
+async function recordPhotoInDb(matchId, side, r2Path, meta) {
+  return sb('POST', 'papertrail',
+    'photos?on_conflict=match_id,side',
+    [{
+      match_id: matchId, side, r2_path: r2Path,
+      uploader_apa_number: state.identity && state.identity.apa_number,
+      uploader_name:       state.identity && state.identity.name,
+      bytes:        meta.bytes,
+      content_type: 'image/jpeg',
+      width:  meta.width,
+      height: meta.height
+    }]);
+}
+async function deletePhotoRow(photoId) {
+  await sb('DELETE', 'papertrail', 'photos?id=eq.' + photoId);
+}
+
+/* ── Render: header ────────────────────────────────────────────────── */
+function renderHeader() {
+  const el = document.getElementById('whoBlock');
+  if (!state.identity) { el.innerHTML = ''; return; }
+  el.innerHTML = esc(state.identity.name) + ' &middot; ' +
+    '<a id="switchBtn">Switch player</a>';
+  document.getElementById('switchBtn').onclick = () => {
+    clearIdentity(); renderHeader(); render();
+  };
+}
+
+/* ── Render: top-level router ──────────────────────────────────────── */
+async function render() {
+  const root = document.getElementById('root');
+  renderHeader();
+  if (!state.identity) {
+    root.innerHTML = renderIdentityForm();
+    wireIdentityForm();
     return;
   }
-  root.innerHTML = list.map(s => {
-    const url = publicUrlFor(s.storage_path, s.storage_bucket);
-    const tag = '<span class="sub-tag ' + esc(s.match_type) + '">' + esc(s.match_type) + '</span>';
-    const meta = [
-      s.division_number ? '<span class="strong">div ' + esc(s.division_number) + '</span>' : '',
-      s.division_name   ? esc(s.division_name) : '',
-      s.week_no         ? 'wk ' + esc(s.week_no) : '',
-      s.played_on       ? fmtDate(s.played_on) : '',
-      (s.team_a_number || s.team_b_number) ? esc(s.team_a_number || '?') + ' vs ' + esc(s.team_b_number || '?') : ''
-    ].filter(Boolean).join(' · ');
-    const mine = s.device_id === DEVICE_ID;
-    const adminBtn = IS_ADMIN
-      ? '<button class="icon-btn danger" data-hide="' + s.id + '" title="Hide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>'
-      : '';
-    return '<div class="sub">'
-      + '<img class="sub-thumb" data-lightbox="' + esc(url) + '" src="' + esc(url) + '" alt="" loading="lazy">'
-      + '<div>'
-      +   '<div class="sub-meta-top">' + tag + '<span class="sub-when">' + esc(fmtCreated(s.created_at)) + '</span>' + (mine ? '<span class="sub-tag other">mine</span>' : '') + '</div>'
-      +   '<div class="sub-meta">' + meta + '</div>'
-      +   (s.notes ? '<div class="sub-meta" style="margin-top:4px;color:var(--text);">' + esc(s.notes) + '</div>' : '')
-      +   (s.submitter_name ? '<div class="sub-meta" style="margin-top:2px;">— ' + esc(s.submitter_name) + '</div>' : '')
-      + '</div>'
-      + '<div class="sub-actions">' + adminBtn + '</div>'
-      + '</div>';
-  }).join('');
-  root.querySelectorAll('[data-lightbox]').forEach(img => img.addEventListener('click', () => openLightbox(img.dataset.lightbox)));
-  root.querySelectorAll('[data-hide]').forEach(btn => btn.addEventListener('click', () => doHide(+btn.dataset.hide)));
-}
-
-function openLightbox(url) {
-  document.getElementById('lightboxImg').src = url;
-  document.getElementById('lightbox').classList.add('shown');
-}
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('shown');
-  document.getElementById('lightboxImg').src = '';
-}
-
-async function doHide(id) {
-  if (!confirm('Hide this submission?')) return;
-  try {
-    await adminHide(id, true);
-    _subs = _subs.filter(s => s.id !== id);
-    renderAll();
-    toast('Hidden', 'ok');
-  } catch (e) { toast('Hide failed: ' + e.message, 'err'); }
-}
-
-/* ─── Form handlers ──────────────────────────────────────────────────*/
-function setMatchType(mt) {
-  _matchType = mt;
-  document.querySelectorAll('#matchTypeSeg .seg-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.mt === mt));
-}
-
-function attachPhoto(file) {
-  if (!file) { _photo = null; return; }
-  if (!/^image\//.test(file.type)) {
-    toast('Only image files are accepted', 'err'); return;
+  if (state.view === 'team' && state.teamCtx) {
+    await renderTeamView(root, state.teamCtx);
+    return;
   }
-  if (file.size > 12 * 1024 * 1024) {
-    toast('File too large (max 12 MB)', 'err'); return;
-  }
-  _photo = { file, mime: file.type, bytes: file.size };
-  const preview = document.getElementById('capturePreview');
-  preview.src = URL.createObjectURL(file);
-  preview.style.display = 'block';
-  document.getElementById('captureZone').classList.add('loaded');
-  document.getElementById('captureZone').querySelector('.cz-title').textContent = 'Photo attached — tap to retake';
-  document.getElementById('captureZone').querySelector('.cz-sub').textContent = (file.size/1024/1024).toFixed(1) + ' MB · ' + file.type;
-  refreshSubmitBtn();
-  document.getElementById('clearFormBtn').style.display = 'inline-flex';
+  await renderHome(root);
 }
 
-function clearForm() {
-  _photo = null;
-  document.getElementById('capturePreview').src = '';
-  document.getElementById('capturePreview').style.display = 'none';
-  document.getElementById('captureZone').classList.remove('loaded');
-  document.getElementById('captureZone').querySelector('.cz-title').textContent = 'Take photo / choose image';
-  document.getElementById('captureZone').querySelector('.cz-sub').textContent = 'Camera opens on phones; gallery on desktop.';
-  document.getElementById('photoInput').value = '';
-  document.getElementById('divNum').value = '';
-  document.getElementById('divName').value = '';
-  document.getElementById('weekNo').value = '';
-  document.getElementById('teamA').value = '';
-  document.getElementById('teamB').value = '';
-  document.getElementById('subNotes').value = '';
-  document.getElementById('clearFormBtn').style.display = 'none';
-  refreshSubmitBtn();
+function renderIdentityForm() {
+  return `
+    <div class="card id-card">
+      <h2>Welcome, Captain</h2>
+      <p>Enter your APA number — or the email APA has on file for you — to find your Masters and Doubles teams.</p>
+      <div class="id-input-row">
+        <input id="idInput" class="id-input" type="text" inputmode="text" autocomplete="off"
+          placeholder="APA# or email" autocapitalize="none" autocorrect="off">
+        <button class="btn btn-primary" id="idGo">Find</button>
+      </div>
+      <div id="idStatus" style="margin-top:10px;"></div>
+    </div>`;
+}
+function wireIdentityForm() {
+  const inp = document.getElementById('idInput');
+  const go  = document.getElementById('idGo');
+  const st  = document.getElementById('idStatus');
+  go.onclick = async () => {
+    const v = inp.value.trim();
+    if (!v) { inp.focus(); return; }
+    go.disabled = true;
+    st.innerHTML = '<div class="status progress"><span class="spinner"></span>Looking up…</div>';
+    try {
+      const player = await lookupPlayer(v);
+      if (!player) {
+        st.innerHTML = '<div class="status error">Couldn’t find that ' +
+          (v.includes('@') ? 'email' : 'APA#') +
+          '. Double-check and try again.</div>';
+        go.disabled = false; return;
+      }
+      saveIdentity(player); render();
+    } catch (e) {
+      st.innerHTML = '<div class="status error">Lookup failed: ' + esc(e.message) + '</div>';
+      go.disabled = false;
+    }
+  };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') go.click(); });
+  inp.focus();
 }
 
-function refreshSubmitBtn() {
-  document.getElementById('submitBtn').disabled = !_photo;
-}
-
-async function doSubmit() {
-  if (!_photo) { toast('Attach a photo first', 'err'); return; }
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = 'Uploading…';
+/* ── Render: home (team buttons) ───────────────────────────────────── */
+async function renderHome(root) {
+  root.innerHTML = '<div class="card"><div class="status progress"><span class="spinner"></span>Loading your teams…</div></div>';
+  let teams;
   try {
-    const storage_path = await uploadPhoto(_photo.file);
-    const payload = {
-      device_id: DEVICE_ID,
-      submitter_name: getNickname() || null,
-      match_type: _matchType,
-      division_number: (document.getElementById('divNum').value || '').trim() || null,
-      division_name:   (document.getElementById('divName').value || '').trim() || null,
-      week_no:         parseInt(document.getElementById('weekNo').value, 10) || null,
-      played_on:       document.getElementById('playedOn').value || null,
-      team_a_number:   (document.getElementById('teamA').value || '').trim() || null,
-      team_b_number:   (document.getElementById('teamB').value || '').trim() || null,
-      notes:           (document.getElementById('subNotes').value || '').trim() || null,
-      storage_path,
-      storage_bucket: BUCKET,
-      image_mime:  _photo.mime,
-      image_bytes: _photo.bytes
-    };
-    const saved = await saveSubmission(payload);
-    if (saved) _subs.unshift(saved);
-    clearForm();
-    renderAll();
-    toast('Submitted ✓', 'ok');
+    teams = await loadMyTeams(state.identity.apa_number);
   } catch (e) {
-    toast('Submit failed: ' + e.message, 'err');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Submit';
-    refreshSubmitBtn();
+    root.innerHTML = '<div class="card"><div class="status error">' + esc(e.message) + '</div></div>';
+    return;
   }
+  if (teams.length === 0) {
+    root.innerHTML = `
+      <div class="card">
+        <h2>No paper-scored teams this session</h2>
+        <p class="hint">PaperTrail is for Masters and Doubles teams only — all other formats use electronic scoring. If you think this is wrong, double-check the APA# on your card, or contact your league operator.</p>
+      </div>`;
+    return;
+  }
+  const buttons = teams.map(t => {
+    const initials = t.team_name.split(/\s+/).slice(0,2)
+      .map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+    const fmt = FORMATS_WITH_PHOTOS[t.format].label;
+    const night = t.night_of_play ? (' &middot; ' + esc(t.night_of_play)) : '';
+    return `<button class="team-btn" data-team-id="${t.team_id}">
+      <div class="tb-icon">${esc(initials)}</div>
+      <div class="tb-text">
+        <div class="tb-name">${esc(t.team_name)}</div>
+        <div class="tb-meta">${esc(t.division_number)} &middot; ${esc(t.division_name)} &middot; ${esc(fmt)}${night}</div>
+      </div>
+      <div class="tb-arrow">›</div>
+    </button>`;
+  }).join('');
+  root.innerHTML = `
+    <div class="card">
+      <h2>Your paper-scored teams &mdash; ${esc(state.session.name)}</h2>
+      <p class="hint">Tap a team to see its schedule and upload scoresheet photos.</p>
+      <div class="team-buttons" style="margin-top:12px;">${buttons}</div>
+    </div>`;
+  root.querySelectorAll('.team-btn').forEach(btn => {
+    btn.onclick = () => {
+      const id = parseInt(btn.dataset.teamId, 10);
+      const t = teams.find(x => x.team_id === id);
+      if (t) { state.view = 'team'; state.teamCtx = t; render(); }
+    };
+  });
 }
 
-/* ─── Toast ──────────────────────────────────────────────────────────*/
-let _toastTimer = null;
-function toast(msg, kind) {
+/* ── Render: team view (match list) ────────────────────────────────── */
+async function renderTeamView(root, team) {
+  root.innerHTML = `
+    <a class="back-link" id="backHome">‹ Back to teams</a>
+    <div class="card">
+      <h2>${esc(team.team_name)}</h2>
+      <p class="hint">${esc(team.division_number)} &middot; ${esc(team.division_name)} &middot; ${esc(FORMATS_WITH_PHOTOS[team.format].label)}${team.night_of_play ? ' &middot; ' + esc(team.night_of_play) : ''}</p>
+      <div id="matchListContainer" style="margin-top:12px;">
+        <div class="status progress"><span class="spinner"></span>Loading matches…</div>
+      </div>
+    </div>`;
+  document.getElementById('backHome').onclick = () => {
+    state.view = 'home'; state.teamCtx = null; render();
+  };
+
+  let data;
+  try {
+    data = await loadTeamMatches(team);
+  } catch (e) {
+    document.getElementById('matchListContainer').innerHTML =
+      '<div class="status error">' + esc(e.message) + '</div>';
+    return;
+  }
+  const { matches, photosByMatch } = data;
+  const required = FORMATS_WITH_PHOTOS[team.format].photos;
+  const rowsHtml = matches.map(m => renderMatchRow(m, team, required, photosByMatch.get(m.id) || [])).join('');
+  document.getElementById('matchListContainer').innerHTML =
+    rowsHtml ? `<div class="match-list">${rowsHtml}</div>` :
+               '<div class="hint">No matches found for this team.</div>';
+  document.querySelectorAll('.match-row').forEach(row => {
+    if (row.classList.contains('playoff') || row.classList.contains('no_play')
+        || row.classList.contains('bye')) return;
+    row.onclick = () => {
+      const matchId = parseInt(row.dataset.matchId, 10);
+      const m = matches.find(x => x.id === matchId);
+      const photos = (photosByMatch.get(matchId) || []).slice();
+      openMatchModal(m, team, required, photos);
+    };
+  });
+}
+
+function renderMatchRow(m, team, required, photos) {
+  const wk = m.week_number != null ? 'W' + m.week_number : '—';
+  const dt = fmtShortDate(m.scheduled_date);
+
+  if (m.row_type === 'playoff') {
+    return `<div class="match-row playoff">
+      <div class="match-week">${esc(wk)}</div>
+      <div class="match-meta">
+        <div class="match-line1">Playoff Week</div>
+        <div class="match-line2">${esc(dt)}</div>
+      </div>
+      <div class="match-state dim">Playoff</div>
+    </div>`;
+  }
+  if (m.row_type === 'no_play') {
+    return `<div class="match-row no_play">
+      <div class="match-week">&mdash;</div>
+      <div class="match-meta">
+        <div class="match-line1">${esc(m.label || 'No Play')}</div>
+        <div class="match-line2">${esc(dt)}</div>
+      </div>
+      <div class="match-state dim">No Play</div>
+    </div>`;
+  }
+
+  const meHome = m.home_team_id === team.team_id;
+  const opp    = meHome ? m.away_team : m.home_team;
+  const homeAway = meHome ? 'HOME' : 'AWAY';
+  if (!opp) {
+    return `<div class="match-row bye">
+      <div class="match-week">${esc(wk)}</div>
+      <div class="match-meta">
+        <div class="match-line1">BYE</div>
+        <div class="match-line2">${esc(dt)} &middot; opponent unfilled</div>
+      </div>
+      <div class="match-state dim">Bye</div>
+    </div>`;
+  }
+  const haveSides = new Set(photos.map(p => p.side));
+  const allHave = required.every(s => haveSides.has(s));
+  const cls = allHave ? 'uploaded' : 'missing';
+  const stateIcon = allHave
+    ? '<div class="match-state ok">✓</div>'
+    : '<div class="match-state bad">✗</div>';
+  return `<div class="match-row ${cls}" data-match-id="${m.id}">
+    <div class="match-week">${esc(wk)}</div>
+    <div class="match-meta">
+      <div class="match-line1">${meHome ? 'vs ' : '@ '}${esc(opp.team_name)}</div>
+      <div class="match-line2">${esc(dt)} &middot; ${esc(homeAway)} &middot; ${esc(opp.team_number)}</div>
+    </div>
+    ${stateIcon}
+  </div>`;
+}
+
+/* ── Upload modal: open dispatcher ─────────────────────────────────── */
+function openMatchModal(match, team, required, existingPhotos) {
+  const modal = document.getElementById('uploadModal');
+  const body  = document.getElementById('uploadModalBody');
+  modal.classList.add('open');
+  const have = new Set(existingPhotos.map(p => p.side));
+  const haveAll = required.every(s => have.has(s));
+  if (haveAll && existingPhotos.length > 0) {
+    renderReviewMode(body, modal, match, team, existingPhotos);
+    return;
+  }
+  if (required.length === 1) {
+    renderSinglePhotoUpload(body, modal, match, team, required[0]);
+  } else {
+    renderTwoStepUpload(body, modal, match, team, required);
+  }
+}
+function closeModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+  document.getElementById('uploadModalBody').innerHTML = '';
+}
+function modalHeader(match, team) {
+  const opp = match.home_team_id === team.team_id ? match.away_team : match.home_team;
+  const oppName = opp ? opp.team_name : '—';
+  const homeAway = match.home_team_id === team.team_id ? 'HOME' : 'AWAY';
+  return `<h3>Week ${match.week_number} &middot; ${match.home_team_id === team.team_id ? 'vs' : '@'} ${esc(oppName)}</h3>
+    <p class="sub">${esc(fmtShortDate(match.scheduled_date))} &middot; ${esc(homeAway)}</p>`;
+}
+
+function renderSinglePhotoUpload(body, modal, match, team, side) {
+  body.innerHTML = `
+    ${modalHeader(match, team)}
+    <label class="capture-zone" id="czSingle">
+      <div class="cz-icon">📷</div>
+      <div class="cz-title">Take photo of the scoresheet</div>
+      <div class="cz-sub">Camera opens on phone; gallery on desktop</div>
+      <input type="file" accept="image/*" capture="environment">
+    </label>
+    <img class="preview-img" id="previewSingle" style="display:none;" alt="">
+    <div id="uploadStatus"></div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-outline" id="cancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" disabled style="margin-left:auto;">Save</button>
+    </div>`;
+  let pendingBlob = null, pendingMeta = null;
+  const input = body.querySelector('#czSingle input');
+  const preview = body.querySelector('#previewSingle');
+  const saveBtn = body.querySelector('#saveBtn');
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const { blob, width, height } = await compressImage(file);
+    pendingBlob = blob; pendingMeta = { width, height, bytes: blob.size };
+    preview.src = URL.createObjectURL(blob);
+    preview.style.display = 'block';
+    saveBtn.disabled = false;
+  };
+  body.querySelector('#cancelBtn').onclick = () => closeModal();
+  saveBtn.onclick = async () => {
+    if (!pendingBlob) return;
+    saveBtn.disabled = true;
+    body.querySelector('#uploadStatus').innerHTML =
+      '<div class="status progress"><span class="spinner"></span>Uploading…</div>';
+    try {
+      const path = r2PathFor(match.id, side);
+      await uploadToR2(path, pendingBlob);
+      await recordPhotoInDb(match.id, side, path, pendingMeta);
+      closeModal();
+      toast('Saved');
+      render();
+    } catch (e) {
+      body.querySelector('#uploadStatus').innerHTML =
+        '<div class="status error">' + esc(e.message) + '</div>';
+      saveBtn.disabled = false;
+    }
+  };
+}
+
+/* ── 9-Ball atomic 2-step wizard ──────────────────────────────────── */
+function renderTwoStepUpload(body, modal, match, team, required) {
+  let step = 1;
+  const captures = {};  // 'front' | 'back' → { blob, meta }
+
+  function renderStep() {
+    const which = required[step - 1];
+    body.innerHTML = `
+      ${modalHeader(match, team)}
+      <div class="step-pill">Step ${step} of 2 &middot; ${which.toUpperCase()} of scoresheet</div>
+      <p class="sub">Both pages required — nothing is saved until both are captured.</p>
+      <label class="capture-zone" id="czStep">
+        <div class="cz-icon">📷</div>
+        <div class="cz-title">Take photo: ${which} page</div>
+        <div class="cz-sub">Camera opens on phone; gallery on desktop</div>
+        <input type="file" accept="image/*" capture="environment">
+      </label>
+      <img class="preview-img" id="previewStep" style="display:none;" alt="">
+      <div id="uploadStatus"></div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-outline" id="cancelBtn">${step === 1 ? 'Cancel' : '‹ Back'}</button>
+        <button class="btn btn-primary" id="nextBtn" disabled style="margin-left:auto;">
+          ${step === 2 ? 'Save both' : 'Next: back page ›'}
+        </button>
+      </div>`;
+    // If we already have a capture for this step (e.g. came back from step 2), show it
+    if (captures[which]) {
+      const prev = body.querySelector('#previewStep');
+      prev.src = URL.createObjectURL(captures[which].blob);
+      prev.style.display = 'block';
+      body.querySelector('#nextBtn').disabled = false;
+    }
+    const input = body.querySelector('#czStep input');
+    const preview = body.querySelector('#previewStep');
+    const nextBtn = body.querySelector('#nextBtn');
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const { blob, width, height } = await compressImage(file);
+      captures[which] = { blob, meta: { width, height, bytes: blob.size } };
+      preview.src = URL.createObjectURL(blob);
+      preview.style.display = 'block';
+      nextBtn.disabled = false;
+    };
+    body.querySelector('#cancelBtn').onclick = () => {
+      if (step === 1) closeModal();
+      else { step = 1; renderStep(); }
+    };
+    nextBtn.onclick = async () => {
+      if (step === 1) { step = 2; renderStep(); return; }
+      nextBtn.disabled = true;
+      body.querySelector('#uploadStatus').innerHTML =
+        '<div class="status progress"><span class="spinner"></span>Saving both pages…</div>';
+      try {
+        for (const s of required) {
+          const c = captures[s];
+          const path = r2PathFor(match.id, s);
+          await uploadToR2(path, c.blob);
+          await recordPhotoInDb(match.id, s, path, c.meta);
+        }
+        closeModal();
+        toast('Saved (front + back)');
+        render();
+      } catch (e) {
+        body.querySelector('#uploadStatus').innerHTML =
+          '<div class="status error">' + esc(e.message) + '</div>';
+        nextBtn.disabled = false;
+      }
+    };
+  }
+  renderStep();
+}
+
+/* ── Review mode: existing photos, view + delete ───────────────────── */
+function renderReviewMode(body, modal, match, team, existingPhotos) {
+  const photosHtml = existingPhotos.map(p => `
+    <div class="ph">
+      <img class="ph-img" src="${R2_URL}/${esc(p.r2_path)}" alt=""
+           data-photo-url="${R2_URL}/${esc(p.r2_path)}">
+      <div class="ph-foot">
+        <div class="ph-label">${esc(p.side === 'single' ? 'Scoresheet' : p.side)}
+          <span class="side"> &middot; ${esc(fmtTimeAgo(p.uploaded_at))}</span></div>
+        <button class="btn btn-outline" data-del-id="${p.id}" data-del-path="${esc(p.r2_path)}">Delete</button>
+      </div>
+    </div>`).join('');
+  body.innerHTML = `
+    ${modalHeader(match, team)}
+    <p class="sub">Tap a photo to view full-size. Tap Delete to remove.</p>
+    <div class="photo-grid" style="margin-top:8px;">${photosHtml}</div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-primary" id="doneBtn" style="margin-left:auto;">Done</button>
+    </div>`;
+  body.querySelectorAll('.ph-img').forEach(img => {
+    img.onclick = () => openLightbox(img.dataset.photoUrl);
+  });
+  body.querySelectorAll('[data-del-id]').forEach(b => {
+    b.onclick = () => askDelete(parseInt(b.dataset.delId, 10), b.dataset.delPath);
+  });
+  body.querySelector('#doneBtn').onclick = () => closeModal();
+}
+
+/* ── Custom delete-confirmation modal ──────────────────────────────── */
+function askDelete(photoId, r2Path) {
+  const cm = document.getElementById('confirmModal');
+  const cb = document.getElementById('confirmModalBody');
+  cm.classList.add('open');
+  cb.innerHTML = `
+    <h3>Delete this scoresheet photo?</h3>
+    <p class="sub">This removes it from PaperTrail and the league archive. You can re-upload later if needed, but this specific image is gone.</p>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-outline" id="cancelDel">Keep it</button>
+      <button class="btn btn-danger" id="confirmDel" style="margin-left:auto;">Delete</button>
+    </div>
+    <div id="delStatus"></div>`;
+  cb.querySelector('#cancelDel').onclick = () => cm.classList.remove('open');
+  cb.querySelector('#confirmDel').onclick = async () => {
+    cb.querySelector('#confirmDel').disabled = true;
+    cb.querySelector('#delStatus').innerHTML =
+      '<div class="status progress"><span class="spinner"></span>Deleting…</div>';
+    try {
+      await deletePhotoRow(photoId);
+      await deleteFromR2(r2Path);
+      cm.classList.remove('open');
+      closeModal();
+      toast('Deleted');
+      render();
+    } catch (e) {
+      cb.querySelector('#delStatus').innerHTML =
+        '<div class="status error">' + esc(e.message) + '</div>';
+      cb.querySelector('#confirmDel').disabled = false;
+    }
+  };
+}
+
+/* ── Lightbox ──────────────────────────────────────────────────────── */
+function openLightbox(url) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = url;
+  lb.classList.add('open');
+}
+document.getElementById('lightboxClose').onclick = () =>
+  document.getElementById('lightbox').classList.remove('open');
+document.getElementById('lightbox').onclick = (e) => {
+  if (e.target.id === 'lightbox') e.currentTarget.classList.remove('open');
+};
+
+/* ── Toast ─────────────────────────────────────────────────────────── */
+let toastTimer = null;
+function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast shown' + (kind ? ' ' + kind : '');
-  if (_toastTimer) clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove('shown'), 2800);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-/* ─── Version auto-update ───────────────────────────────────────────*/
+/* ── Helpers ───────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function fmtShortDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${m}/${d}/${y}`;
+}
+function fmtTimeAgo(iso) {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (sec < 60)        return 'just now';
+  if (sec < 3600)      return Math.floor(sec / 60) + 'm ago';
+  if (sec < 86400)     return Math.floor(sec / 3600) + 'h ago';
+  if (sec < 86400 * 7) return Math.floor(sec / 86400) + 'd ago';
+  return new Date(iso).toLocaleDateString();
+}
+
+/* ── Auto-update version-poll (standard pattern) ──────────────────── */
 async function checkVersion() {
   try {
-    const r = await fetch(SB_URL + '/rest/v1/apps?app_name=eq.' + APP_NAME + '&select=version', { headers: HEADERS_APA });
+    const r = await fetch(SB_URL + '/rest/v1/apps?app_name=eq.' + encodeURIComponent(APP_NAME) +
+      '&select=version',
+      { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON,
+                   'Accept-Profile': 'apa_core' } });
     if (!r.ok) return;
-    const data = await r.json();
-    if (data && data[0] && data[0].version && data[0].version !== window.APP_VERSION) {
-      document.getElementById('updateOverlay').classList.add('shown');
-      setTimeout(() => location.reload(), 2500);
+    const rows = await r.json();
+    if (!rows || !rows[0]) return;
+    if (rows[0].version !== window.APP_VERSION) {
+      document.getElementById('updateOverlay').classList.add('open');
+      setTimeout(() => location.reload(true), 800);
     }
   } catch (_) {}
 }
 
-/* ─── Init ──────────────────────────────────────────────────────────*/
-async function init() {
-  document.title = 'ScoreSheets';
-  document.getElementById('versionLabel').textContent = 'v' + (window.APP_VERSION || '?');
-  checkVersion();
-  setInterval(checkVersion, 30000);
+/* ── Bootstrap ─────────────────────────────────────────────────────── */
+loadIdentity();
+render();
+setInterval(checkVersion, 30000);
 
-  // Default played_on to today.
-  const today = new Date();
-  document.getElementById('playedOn').value =
-    today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-
-  document.getElementById('nicknameInput').addEventListener('input', e => setNickname(e.target.value.trim()));
-  document.querySelectorAll('#matchTypeSeg .seg-btn').forEach(b =>
-    b.addEventListener('click', () => setMatchType(b.dataset.mt)));
-  document.getElementById('photoInput').addEventListener('change', e => attachPhoto(e.target.files[0]));
-  document.getElementById('submitBtn').addEventListener('click', doSubmit);
-  document.getElementById('clearFormBtn').addEventListener('click', clearForm);
-  document.querySelectorAll('.tab').forEach(t =>
-    t.addEventListener('click', () => { _filter = t.dataset.filter; renderAll(); }));
-  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-  document.getElementById('lightbox').addEventListener('click', e => {
-    if (e.target.id === 'lightbox') closeLightbox();
-  });
-
-  try { await loadAll(); }
-  catch (e) {
-    document.getElementById('subsRoot').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>';
-  }
-  renderAll();
-}
-document.addEventListener('DOMContentLoaded', init);
 </script>
+
 </body>
 </html>
