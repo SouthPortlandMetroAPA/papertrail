@@ -379,20 +379,15 @@ function clearIdentity() {
 }
 
 /* ── Player lookup ─────────────────────────────────────────────────── */
+/* Uses slate.papertrail_lookup_player(input) RPC — narrow column return
+ * (apa_number, name, email) so anon never sees PII (phones, addresses). */
 async function lookupPlayer(input) {
   const v = input.trim();
   if (!v) return null;
-  const isEmail = v.includes('@');
-  const filter = isEmail
-    ? 'email=ilike.' + encodeURIComponent(v)
-    : 'member_number=eq.' + encodeURIComponent(v);
-  const rows = await sb('GET', 'slate',
-    'players?select=member_number,first_name,last_name,nickname,email&' + filter + '&limit=1');
+  const rows = await sb('POST', 'slate', 'rpc/papertrail_lookup_player', { input: v });
   if (!rows || rows.length === 0) return null;
   const p = rows[0];
-  const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
-            || p.nickname || p.member_number;
-  return { apa_number: p.member_number, name, email: p.email };
+  return { apa_number: p.apa_number, name: p.name, email: p.email };
 }
 
 /* ── Current session ───────────────────────────────────────────────── */
@@ -406,37 +401,26 @@ async function loadCurrentSession() {
 }
 
 /* ── Player → teams (Masters + Doubles only, current SPM session) ── */
+/* Uses slate.papertrail_my_teams(p_apa_number) RPC — already filtered
+ * server-side to current SPM session × Masters/Doubles. Returns at most
+ * one row per team (captain/co-captain dedup is in the function).      */
 async function loadMyTeams(apaNumber) {
   await loadCurrentSession();
-  const select = 'team_id,role,team:teams!inner(' +
-    'id,team_number,team_name,division_id,' +
-    'division:divisions!inner(id,division_number,name,format,session_id,operator_id,night_of_play))';
-  const rows = await sb('GET', 'slate',
-    'team_memberships?select=' + select +
-    '&member_number=eq.' + encodeURIComponent(apaNumber));
+  const rows = await sb('POST', 'slate', 'rpc/papertrail_my_teams',
+    { p_apa_number: apaNumber });
   if (!rows) return [];
-  const sessionId = state.session.id;
   return rows
-    .filter(r =>
-      r.team && r.team.division
-      && r.team.division.session_id  === sessionId
-      && r.team.division.operator_id === SPM_OPERATOR_ID
-      && PAPERTRAIL_FORMATS.includes(r.team.division.format))
     .map(r => ({
       role:            r.role,
-      team_id:         r.team.id,
-      team_number:     r.team.team_number,
-      team_name:       r.team.team_name,
-      division_id:     r.team.division.id,
-      division_number: r.team.division.division_number,
-      division_name:   r.team.division.name,
-      format:          r.team.division.format,
-      night_of_play:   r.team.division.night_of_play
+      team_id:         r.team_id,
+      team_number:     r.team_number,
+      team_name:       r.team_name,
+      division_id:     r.division_id,
+      division_number: r.division_number,
+      division_name:   r.division_name,
+      format:          r.format,
+      night_of_play:   r.night_of_play
     }))
-    .reduce((acc, t) => {  // de-dup if captain+co-captain double-rows
-      if (!acc.find(x => x.team_id === t.team_id)) acc.push(t);
-      return acc;
-    }, [])
     .sort((a, b) => a.division_number.localeCompare(b.division_number));
 }
 
