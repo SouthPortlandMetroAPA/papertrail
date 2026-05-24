@@ -360,6 +360,45 @@ async function sb(method, schema, path, body) {
   return ct.includes('json') ? r.json() : r.text();
 }
 
+/* ── Audit log (fire-and-forget; queried by Claude, not by UI) ────── */
+/* Every meaningful captain action posts a row to papertrail.action_log.
+ * Errors are swallowed; logging NEVER blocks or breaks the user flow.
+ * Multi-step flows (e.g. upload: start → r2 → db → done) are correlated
+ * via a per-page-load session_token.                                  */
+function ptSessionToken() {
+  if (!window.__ptSessionToken) {
+    window.__ptSessionToken = 'pt-' +
+      Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36);
+  }
+  return window.__ptSessionToken;
+}
+function logAction(action, payload) {
+  try {
+    const body = {
+      action,
+      apa_number:    (state.identity && state.identity.apa_number) || null,
+      captain_name:  (state.identity && state.identity.name) || null,
+      app_version:   window.APP_VERSION || null,
+      user_agent:    (navigator.userAgent || '').slice(0, 250),
+      session_token: ptSessionToken(),
+      source:        'papertrail',
+      ...(payload || {})
+    };
+    fetch(SB_URL + '/rest/v1/action_log', {
+      method: 'POST',
+      headers: {
+        apikey: SB_ANON,
+        Authorization: 'Bearer ' + SB_ANON,
+        'Content-Type': 'application/json',
+        'Content-Profile': 'papertrail',
+        'Accept-Profile':  'papertrail',
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify([body])
+    }).catch(() => {});
+  } catch (_) {}
+}
+
 /* ── Identity persistence ──────────────────────────────────────────── */
 function loadIdentity() {
   try {
@@ -370,8 +409,10 @@ function loadIdentity() {
 function saveIdentity(id) {
   state.identity = id;
   try { localStorage.setItem('papertrail.identity', JSON.stringify(id)); } catch (_) {}
+  logAction('identity_set', { ok: true });
 }
 function clearIdentity() {
+  logAction('identity_clear', { ok: true });
   state.identity = null;
   state.teamCtx = null;
   state.view = 'home';
@@ -384,10 +425,17 @@ function clearIdentity() {
 async function lookupPlayer(input) {
   const v = input.trim();
   if (!v) return null;
-  const rows = await sb('POST', 'slate', 'rpc/papertrail_lookup_player', { input: v });
-  if (!rows || rows.length === 0) return null;
-  const p = rows[0];
-  return { apa_number: p.apa_number, name: p.name, email: p.email };
+  try {
+    const rows = await sb('POST', 'slate', 'rpc/papertrail_lookup_player', { input: v });
+    const p = (rows && rows[0]) || null;
+    logAction('lookup', { ok: !!p, error_message: p ? null : 'not_found',
+      apa_number: p ? p.apa_number : null,
+      captain_name: p ? p.name : null });
+    return p ? { apa_number: p.apa_number, name: p.name, email: p.email } : null;
+  } catch (e) {
+    logAction('lookup', { ok: false, error_message: (e && e.message || String(e)).slice(0, 250) });
+    throw e;
+  }
 }
 
 /* ── Current session ───────────────────────────────────────────────── */
@@ -406,22 +454,28 @@ async function loadCurrentSession() {
  * one row per team (captain/co-captain dedup is in the function).      */
 async function loadMyTeams(apaNumber) {
   await loadCurrentSession();
-  const rows = await sb('POST', 'slate', 'rpc/papertrail_my_teams',
-    { p_apa_number: apaNumber });
-  if (!rows) return [];
-  return rows
-    .map(r => ({
-      role:            r.role,
-      team_id:         r.team_id,
-      team_number:     r.team_number,
-      team_name:       r.team_name,
-      division_id:     r.division_id,
-      division_number: r.division_number,
-      division_name:   r.division_name,
-      format:          r.format,
-      night_of_play:   r.night_of_play
-    }))
-    .sort((a, b) => a.division_number.localeCompare(b.division_number));
+  try {
+    const rows = await sb('POST', 'slate', 'rpc/papertrail_my_teams',
+      { p_apa_number: apaNumber });
+    const teams = (rows || [])
+      .map(r => ({
+        role:            r.role,
+        team_id:         r.team_id,
+        team_number:     r.team_number,
+        team_name:       r.team_name,
+        division_id:     r.division_id,
+        division_number: r.division_number,
+        division_name:   r.division_name,
+        format:          r.format,
+        night_of_play:   r.night_of_play
+      }))
+      .sort((a, b) => a.division_number.localeCompare(b.division_number));
+    logAction('teams_loaded', { ok: true, bytes: teams.length });
+    return teams;
+  } catch (e) {
+    logAction('teams_loaded', { ok: false, error_message: (e && e.message || String(e)).slice(0, 250) });
+    throw e;
+  }
 }
 
 /* ── Matches + photos for a team ───────────────────────────────────── */
@@ -495,13 +549,20 @@ function r2PathFor(matchId, teamId, side) {
 }
 async function uploadToR2(path, blob) {
   const r = await fetch(R2_URL + '/' + path, {
-    method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/jpeg', 'X-Session-Token': ptSessionToken() },
+    body: blob
   });
   if (!r.ok) throw new Error('R2 upload failed: ' + r.status + ' ' + (await r.text()).slice(0, 200));
   return r.json();
 }
 async function deleteFromR2(path) {
-  try { await fetch(R2_URL + '/' + path, { method: 'DELETE' }); } catch (_) {}
+  try {
+    await fetch(R2_URL + '/' + path, {
+      method: 'DELETE',
+      headers: { 'X-Session-Token': ptSessionToken() }
+    });
+  } catch (_) {}
 }
 async function recordPhotoInDb(matchId, teamId, side, r2Path, meta) {
   return sb('POST', 'papertrail',
@@ -629,7 +690,10 @@ async function renderHome(root) {
     btn.onclick = () => {
       const id = parseInt(btn.dataset.teamId, 10);
       const t = teams.find(x => x.team_id === id);
-      if (t) { state.view = 'team'; state.teamCtx = t; render(); }
+      if (t) {
+        logAction('view_team', { ok: true, team_id: t.team_id });
+        state.view = 'team'; state.teamCtx = t; render();
+      }
     };
   });
 }
@@ -663,6 +727,7 @@ async function renderTeamView(root, team) {
   document.getElementById('matchListContainer').innerHTML =
     rowsHtml ? `<div class="match-list">${rowsHtml}</div>` :
                '<div class="hint">No matches found for this team.</div>';
+  logAction('matches_loaded', { ok: true, team_id: team.team_id, bytes: matches.length });
   document.querySelectorAll('.match-row').forEach(row => {
     if (row.classList.contains('playoff') || row.classList.contains('no_play')
         || row.classList.contains('bye')) return;
@@ -670,6 +735,7 @@ async function renderTeamView(root, team) {
       const matchId = parseInt(row.dataset.matchId, 10);
       const m = matches.find(x => x.id === matchId);
       const photos = (photosByMatch.get(matchId) || []).slice();
+      logAction('open_match', { ok: true, team_id: team.team_id, match_id: matchId });
       openMatchModal(m, team, required, photos);
     };
   });
@@ -795,14 +861,22 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
     saveBtn.disabled = true;
     body.querySelector('#uploadStatus').innerHTML =
       '<div class="status progress"><span class="spinner"></span>Uploading…</div>';
+    logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id,
+      side, bytes: pendingMeta.bytes });
     try {
       const path = r2PathFor(match.id, team.team_id, side);
       await uploadToR2(path, pendingBlob);
       await recordPhotoInDb(match.id, team.team_id, side, path, pendingMeta);
+      logAction('upload_db', { ok: true, team_id: team.team_id, match_id: match.id,
+        side, r2_path: path, bytes: pendingMeta.bytes });
+      logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
+        side, r2_path: path });
       closeModal();
       toast('Saved');
       render();
     } catch (e) {
+      logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
+        side, error_message: (e && e.message || String(e)).slice(0, 250) });
       body.querySelector('#uploadStatus').innerHTML =
         '<div class="status error">' + esc(e.message) + '</div>';
       saveBtn.disabled = false;
@@ -866,17 +940,25 @@ function renderTwoStepUpload(body, modal, match, team, required) {
       nextBtn.disabled = true;
       body.querySelector('#uploadStatus').innerHTML =
         '<div class="status progress"><span class="spinner"></span>Saving both pages…</div>';
+      logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id,
+        side: 'front+back',
+        bytes: (captures.front && captures.front.meta.bytes || 0) + (captures.back && captures.back.meta.bytes || 0) });
       try {
         for (const s of required) {
           const c = captures[s];
           const path = r2PathFor(match.id, team.team_id, s);
           await uploadToR2(path, c.blob);
           await recordPhotoInDb(match.id, team.team_id, s, path, c.meta);
+          logAction('upload_db', { ok: true, team_id: team.team_id, match_id: match.id,
+            side: s, r2_path: path, bytes: c.meta.bytes });
         }
+        logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id, side: 'front+back' });
         closeModal();
         toast('Saved (front + back)');
         render();
       } catch (e) {
+        logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
+          error_message: (e && e.message || String(e)).slice(0, 250) });
         body.querySelector('#uploadStatus').innerHTML =
           '<div class="status error">' + esc(e.message) + '</div>';
         nextBtn.disabled = false;
@@ -932,14 +1014,19 @@ function askDelete(photoId, r2Path) {
     cb.querySelector('#confirmDel').disabled = true;
     cb.querySelector('#delStatus').innerHTML =
       '<div class="status progress"><span class="spinner"></span>Deleting…</div>';
+    logAction('delete_start', { ok: true, r2_path: r2Path });
     try {
       await deletePhotoRow(photoId);
+      logAction('delete_db', { ok: true, r2_path: r2Path });
       await deleteFromR2(r2Path);
+      logAction('delete_done', { ok: true, r2_path: r2Path });
       cm.classList.remove('open');
       closeModal();
       toast('Deleted');
       render();
     } catch (e) {
+      logAction('delete_error', { ok: false, r2_path: r2Path,
+        error_message: (e && e.message || String(e)).slice(0, 250) });
       cb.querySelector('#delStatus').innerHTML =
         '<div class="status error">' + esc(e.message) + '</div>';
       cb.querySelector('#confirmDel').disabled = false;
@@ -1009,6 +1096,7 @@ async function checkVersion() {
 
 /* ── Bootstrap ─────────────────────────────────────────────────────── */
 loadIdentity();
+logAction('init', { ok: true });
 render();
 setInterval(checkVersion, 30000);
 
