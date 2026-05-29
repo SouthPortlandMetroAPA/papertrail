@@ -405,7 +405,15 @@ async function sb(method, schema, path, body) {
   const headers = { ...sbHeaders(schema) };
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
-    headers['Prefer']       = 'return=representation';
+    // PostgREST UPSERT: a URL like ?on_conflict=col1,col2 is silently
+    // ignored unless the Prefer header also requests
+    // resolution=merge-duplicates. Without it, the row is INSERTed and
+    // the unique constraint fires (Postgres 23505). v2.4 fix — this
+    // bug had been latent since v1.0 and only showed up when a captain
+    // re-uploaded a side they'd already filed.
+    const prefer = ['return=representation'];
+    if (/[?&]on_conflict=/.test(path)) prefer.push('resolution=merge-duplicates');
+    headers['Prefer'] = prefer.join(',');
   }
   const r = await fetch(SB_URL + '/rest/v1/' + path, {
     method, headers, body: body !== undefined ? JSON.stringify(body) : undefined
