@@ -1206,8 +1206,8 @@ function renderTwoStepUpload(body, modal, match, team, required) {
           <div class="source-label">Choose from library</div>
           <div class="source-sub">${esc(which)} page</div>
         </button>
-        <input type="file" accept="image/*" capture="environment" data-input="camera">
-        <input type="file" accept="image/*"                       data-input="library">
+        <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
+        <input type="file" accept="image/*,application/pdf"                       data-input="library">
       </div>
       <img class="preview-img" id="previewStep" style="display:none;" alt="">
       <div id="uploadStatus"></div>
