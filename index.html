@@ -610,6 +610,64 @@ function wireSourcePicker(rootEl, onPick) {
   if (libraryIn) libraryIn.onchange = () => handle(libraryIn);
 }
 
+/* ── PDF → image (lazy PDF.js, page 1 only) ─────────────────────────
+   2.5+: some captains scan with a phone "Scan document" feature or a
+   desktop scanner that outputs PDF instead of an image. We accept PDFs
+   in the same file inputs, render page 1 to canvas at the same
+   resolution target as compressImage (COMPRESS_MAX_DIM long edge), and
+   then go through the existing R2/DB path — net effect is "PDF in,
+   JPEG out" so the photos table only ever holds images. Multi-page
+   PDFs are NOT split: only page 1 is captured. For 9-Ball Doubles
+   (front+back), the captain picks the front-PDF on step 1 and the
+   back-PDF (or photo) on step 2 — same wizard, no special multi-page
+   detection. */
+const PDFJS_VERSION = '4.8.69';
+const PDFJS_URL     = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.min.mjs';
+const PDFJS_WORKER  = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.worker.min.mjs';
+let _pdfJsPromise = null;
+function ensurePdfJs() {
+  if (!_pdfJsPromise) {
+    _pdfJsPromise = import(PDFJS_URL).then(mod => {
+      mod.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      return mod;
+    });
+  }
+  return _pdfJsPromise;
+}
+function isPdfFile(file) {
+  return !!file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || ''));
+}
+async function pdfToImage(file) {
+  const pdfjs = await ensurePdfJs();
+  const buf   = await file.arrayBuffer();
+  const doc   = await pdfjs.getDocument({ data: new Uint8Array(buf), useSystemFonts: true }).promise;
+  if (!doc.numPages) throw new Error('PDF has no pages');
+  const page  = await doc.getPage(1);
+  // Match compressImage's resolution target: scale so longest edge lands
+  // near COMPRESS_MAX_DIM (2000 px), then JPEG-compress at COMPRESS_QUALITY.
+  const natVp = page.getViewport({ scale: 1 });
+  const longest = Math.max(natVp.width, natVp.height);
+  const scale = longest > 0 ? COMPRESS_MAX_DIM / longest : 1;
+  const vp = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.round(vp.width);
+  canvas.height = Math.round(vp.height);
+  // Render against white so transparent regions don't show as black.
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', COMPRESS_QUALITY));
+  return { blob, width: canvas.width, height: canvas.height };
+}
+/* Unified entry: image → compress; PDF → rasterize page 1.
+   Returns the same {blob, width, height} shape as compressImage so the
+   downstream upload path is unchanged. */
+async function prepareUpload(file) {
+  if (isPdfFile(file)) return pdfToImage(file);
+  return compressImage(file);
+}
+
 /* ── Image compression ─────────────────────────────────────────────── */
 async function compressImage(file) {
   let bitmap;
@@ -1075,10 +1133,10 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
       <button type="button" class="source-btn" data-source="library">
         <div class="source-icon">🖼️</div>
         <div class="source-label">Choose from library</div>
-        <div class="source-sub">Pick an existing photo</div>
+        <div class="source-sub">Photo or PDF</div>
       </button>
-      <input type="file" accept="image/*" capture="environment" data-input="camera">
-      <input type="file" accept="image/*"                       data-input="library">
+      <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
+      <input type="file" accept="image/*,application/pdf"                       data-input="library">
     </div>
     <img class="preview-img" id="previewSingle" style="display:none;" alt="">
     <div id="uploadStatus"></div>
@@ -1091,7 +1149,7 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
   const preview = body.querySelector('#previewSingle');
   const saveBtn = body.querySelector('#saveBtn');
   wireSourcePicker(root, async (file) => {
-    const { blob, width, height } = await compressImage(file);
+    const { blob, width, height } = await prepareUpload(file);
     pendingBlob = blob; pendingMeta = { width, height, bytes: blob.size };
     preview.src = URL.createObjectURL(blob);
     preview.style.display = 'block';
@@ -1170,7 +1228,7 @@ function renderTwoStepUpload(body, modal, match, team, required) {
     const preview = body.querySelector('#previewStep');
     const nextBtn = body.querySelector('#nextBtn');
     wireSourcePicker(root, async (file) => {
-      const { blob, width, height } = await compressImage(file);
+      const { blob, width, height } = await prepareUpload(file);
       captures[which] = { blob, meta: { width, height, bytes: blob.size } };
       preview.src = URL.createObjectURL(blob);
       preview.style.display = 'block';
