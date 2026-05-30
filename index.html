@@ -371,6 +371,19 @@ const APP_NAME    = 'PaperTrail';
 const SB_URL      = 'https://dqzbekoaysgaiqljueac.supabase.co';
 const SB_ANON     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxemJla29heXNnYWlxbGp1ZWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzA5NzgsImV4cCI6MjA5MDc0Njk3OH0.cCdGxZ4zEFzU_r6lWSDeoNWG67Q4MSYCAtpds035dfU';
 const R2_URL      = 'https://apa-photos.spmapa.workers.dev';
+
+/* Build an R2 image URL with a per-version cache-buster.
+   R2 paths are deterministic on (session, match, team, side) — so a
+   re-upload writes new bytes to the same URL. Without this, HTTP caches
+   (browser + Cloudflare edge) serve the previous image. uploaded_at is
+   set explicitly by recordPhotoInDb on EVERY write (including in-place
+   UPSERTs) so this value always changes when the bytes might have. */
+function r2Url(r2Path, photo) {
+  const ms = photo && photo.uploaded_at
+    ? new Date(photo.uploaded_at).getTime()
+    : Date.now();
+  return R2_URL + '/' + r2Path + '?v=' + ms;
+}
 const SPM_OPERATOR_ID = 1;
 
 const FORMATS_WITH_PHOTOS = {
@@ -729,7 +742,11 @@ async function recordPhotoInDb(matchId, teamId, side, r2Path, meta) {
       bytes:        meta.bytes,
       content_type: 'image/jpeg',
       width:  meta.width,
-      height: meta.height
+      height: meta.height,
+      // Explicit uploaded_at so it changes on EVERY write — needed because
+      // merge-duplicates UPSERTs preserve the row's original uploaded_at
+      // otherwise, which would freeze the r2Url() cache-buster value.
+      uploaded_at: new Date().toISOString()
     }]);
 }
 async function deletePhotoRow(photoId) {
@@ -1275,8 +1292,8 @@ function renderTwoStepUpload(body, modal, match, team, required) {
 function renderReviewMode(body, modal, match, team, existingPhotos) {
   const photosHtml = existingPhotos.map(p => `
     <div class="ph">
-      <img class="ph-img" src="${R2_URL}/${esc(p.r2_path)}" alt=""
-           data-photo-url="${R2_URL}/${esc(p.r2_path)}">
+      <img class="ph-img" src="${esc(r2Url(p.r2_path, p))}" alt=""
+           data-photo-url="${esc(r2Url(p.r2_path, p))}">
       <div class="ph-foot">
         <div class="ph-label">${esc(p.side === 'single' ? 'Scoresheet' : p.side)}
           <span class="side"> &middot; ${esc(fmtTimeAgo(p.uploaded_at))}</span></div>
