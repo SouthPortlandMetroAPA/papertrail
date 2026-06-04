@@ -186,6 +186,40 @@
   .modal h3 { margin: 0 0 6px; font-size: 1.1rem; font-weight: 800; }
   .modal .sub { color: var(--text-dim); font-size: 0.86rem; margin: 0 0 14px; }
 
+  /* ── Match-teams block (modal header, 2.4+) ────────────────────────
+     Both teams side-by-side with HOME/AWAY pills + team #/name.
+     The captain's own team gets a subtle highlight so "who am I?" is
+     unambiguous. Stacks vertically on narrow screens. */
+  .match-teams {
+    display: flex; align-items: center; gap: 10px;
+    margin: 6px 0 14px;
+    flex-wrap: wrap;
+  }
+  .match-team {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 10px;
+    background: #f6f8fb; border: 1px solid #e4e9f1;
+    flex: 1 1 220px; min-width: 0;
+  }
+  .match-team.mine {
+    background: #eef4ff; border-color: #c7d6f5;
+    box-shadow: inset 0 0 0 1px #c7d6f5;
+  }
+  .ha-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
+    color: #fff;
+  }
+  .ha-pill.home { background: #16a34a; }
+  .ha-pill.away { background: #f59e0b; }
+  .match-team .t-no   { font-weight: 800; font-size: 0.92rem; color: var(--text-dim); white-space: nowrap; }
+  .match-team .t-name { font-weight: 700; font-size: 0.95rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .match-vs { font-weight: 800; color: var(--text-dim); font-size: 0.92rem; text-align: center; flex: 0 0 auto; padding: 0 2px; }
+  @media (max-width: 480px) {
+    .match-teams { flex-direction: column; align-items: stretch; gap: 6px; }
+    .match-vs { display: none; }
+  }
+
   .step-pill {
     display: inline-block; padding: 3px 10px; border-radius: var(--pill);
     background: #eff6ff; color: var(--spm-blue); font-size: 0.74rem; font-weight: 800;
@@ -1102,6 +1136,42 @@ async function doMarkRescheduled(matchId, team, dateStr) {
     setStatus(e.message, 'err');
   }
 }
+/* PaperTrail 2.4+: silently clear the rescheduled flag after a captain
+   successfully uploads a scoresheet. Uploading proves the match
+   happened, so the "needs to be rescheduled" state is no longer
+   accurate. Differs from doClearReschedule() in three ways:
+     1. Fire-and-forget — does NOT block / re-throw on failure. The
+        upload already succeeded; a stale reschedule flag is annoying
+        but not blocking, and admin can clear it manually.
+     2. No toast / no closeModal / no extra render — the calling
+        upload flow already handles those.
+     3. Skips the RPC entirely if the match wasn't rescheduled to
+        begin with — most uploads.
+   The reschedule RPC gates on team membership (slate.team_memberships),
+   so this only works for captains/co-captains/players on the team. */
+async function autoClearRescheduleAfterUpload(match, team) {
+  if (!match || !match.rescheduled) return;
+  if (!state.identity || !state.identity.apa_number) return;
+  logAction('reschedule_auto_clear_start', { ok: true,
+    team_id: team.team_id, match_id: match.id });
+  try {
+    await sb('POST', 'slate', 'rpc/papertrail_clear_reschedule', {
+      p_match_id:   match.id,
+      p_apa_number: state.identity.apa_number
+    });
+    logAction('reschedule_auto_clear_done', { ok: true,
+      team_id: team.team_id, match_id: match.id });
+  } catch (e) {
+    /* Non-blocking: log + swallow. The upload itself succeeded.
+       If this captain isn't a team member (shouldn't happen — they
+       just uploaded), or the RPC errored, leave the flag alone and
+       let admin clean up. */
+    logAction('reschedule_auto_clear_error', { ok: false,
+      team_id: team.team_id, match_id: match.id,
+      error_message: (e && e.message || String(e)).slice(0, 250) });
+  }
+}
+
 async function doClearReschedule(matchId, team) {
   const status = document.getElementById('rsStatus');
   const setStatus = (txt, cls) => {
@@ -1131,11 +1201,36 @@ function closeModal() {
   document.getElementById('uploadModalBody').innerHTML = '';
 }
 function modalHeader(match, team) {
-  const opp = match.home_team_id === team.team_id ? match.away_team : match.home_team;
-  const oppName = opp ? opp.team_name : '—';
-  const homeAway = match.home_team_id === team.team_id ? 'HOME' : 'AWAY';
-  return `<h3>Week ${match.week_number} &middot; ${match.home_team_id === team.team_id ? 'vs' : '@'} ${esc(oppName)}</h3>
-    <p class="sub">${esc(fmtShortDate(match.scheduled_date))} &middot; ${esc(homeAway)}</p>`;
+  /* 2.4+: show BOTH teams clearly. Previously the header only named
+     the opponent ("Week N · vs X") with HOME/AWAY tucked on the next
+     line — captains kept asking "wait, who's who again?", especially
+     for new captains and across divisions. Both team numbers + names
+     now appear side-by-side, with the captain's team highlighted. */
+  const meIsHome = match.home_team_id === team.team_id;
+  const homeT = match.home_team || {};
+  const awayT = match.away_team || {};
+  const dateLabel = esc(fmtShortDate(match.scheduled_date));
+  const wk = (match.week_number != null) ? ('Week ' + match.week_number + ' &middot; ') : '';
+
+  const homeBlock = `
+    <div class="match-team ${meIsHome ? 'mine' : ''}">
+      <span class="ha-pill home">HOME</span>
+      <span class="t-no">#${esc(homeT.team_number || '?')}</span>
+      <span class="t-name">${esc(homeT.team_name || '—')}</span>
+    </div>`;
+  const awayBlock = `
+    <div class="match-team ${!meIsHome ? 'mine' : ''}">
+      <span class="ha-pill away">AWAY</span>
+      <span class="t-no">${esc(awayT.team_number || '?')}</span>
+      <span class="t-name">${esc(awayT.team_name || '—')}</span>
+    </div>`;
+
+  return `<h3>${wk}${dateLabel}</h3>
+    <div class="match-teams">
+      ${homeBlock}
+      <div class="match-vs">vs</div>
+      ${awayBlock}
+    </div>`;
 }
 
 function renderSinglePhotoUpload(body, modal, match, team, side) {
@@ -1188,6 +1283,9 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
         side, r2_path: path, bytes: pendingMeta.bytes });
       logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
         side, r2_path: path });
+      /* 2.4+: uploading a scoresheet means the match was played →
+         clear the rescheduled flag if it was set. Non-blocking. */
+      await autoClearRescheduleAfterUpload(match, team);
       closeModal();
       toast('Saved');
       render();
@@ -1273,6 +1371,9 @@ function renderTwoStepUpload(body, modal, match, team, required) {
             side: s, r2_path: path, bytes: c.meta.bytes });
         }
         logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id, side: 'front+back' });
+        /* 2.4+: uploading a scoresheet means the match was played →
+           clear the rescheduled flag if it was set. Non-blocking. */
+        await autoClearRescheduleAfterUpload(match, team);
         closeModal();
         toast('Saved (front + back)');
         render();
