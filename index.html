@@ -401,7 +401,9 @@
    remembers the last entered identity so captains only type it once.
    ════════════════════════════════════════════════════════════════════════ */
 
-const APP_NAME    = 'PaperTrail';
+const APP_NAME_BASE = 'PaperTrail';
+const IS_PREPROD    = /\/preprod\//.test(location.pathname);
+const APP_NAME      = IS_PREPROD ? APP_NAME_BASE + '-preprod' : APP_NAME_BASE;
 const SB_URL      = 'https://dqzbekoaysgaiqljueac.supabase.co';
 const SB_ANON     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxemJla29heXNnYWlxbGp1ZWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzA5NzgsImV4cCI6MjA5MDc0Njk3OH0.cCdGxZ4zEFzU_r6lWSDeoNWG67Q4MSYCAtpds035dfU';
 const R2_URL      = 'https://apa-photos.spmapa.workers.dev';
@@ -707,11 +709,109 @@ async function pdfToImage(file) {
   const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', COMPRESS_QUALITY));
   return { blob, width: canvas.width, height: canvas.height };
 }
-/* Unified entry: image → compress; PDF → rasterize page 1.
+/* ── HEIC → JPEG (lazy heic2any, libheif WASM) ──────────────────────
+   iPhone Photos save HEIC by default. Browser support as of 2026:
+     Safari (macOS/iOS): ✅ native decode
+     Chrome/Edge/Firefox (desktop+Android): ❌
+     Chrome-on-iOS: ✅ (WebKit)
+   Without conversion, createImageBitmap throws on non-Safari and the
+   upload silently fails with "InvalidStateError". heic2any wraps
+   libheif compiled to WASM and converts in-browser to JPEG.
+
+   Detection: file.type may be 'image/heic' OR 'image/heif' OR (on some
+   iOS uploads via Files picker) the empty string / 'application/octet-
+   stream'. We sniff the first 12 bytes for the HEIC ftyp box brands:
+     ftypheic / ftypheix / ftypmif1 / ftyphevc / ftyphevx / ftypheim
+     ftypheis / ftypmsf1 (HEIF image sequences / multi-image collections).
+   Extension is the second-line fallback for .heic/.heif.
+
+   Output: JPEG quality 0.92. heic2any sometimes returns an array (HEIC
+   sequences = Live Photos). Take the first frame.
+   Bundle is ~1.1MB so we lazy-load it only when an HEIC actually arrives.
+*/
+const HEIC2ANY_URL          = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+const HEIC2ANY_LOAD_TIMEOUT = 30_000;  // 30s — captive portals / Brave shields
+const HEIC_MAX_BYTES        = 30 * 1024 * 1024;  // 30 MB — guard libheif OOM on phones
+let _heic2anyPromise = null;
+function ensureHeic2Any() {
+  if (!_heic2anyPromise) {
+    _heic2anyPromise = new Promise((res, rej) => {
+      if (window.heic2any) return res(window.heic2any);
+      const s = document.createElement('script');
+      s.src = HEIC2ANY_URL;
+      const timer = setTimeout(() => {
+        // onerror doesn't fire for stalled loads (captive portal, blocked CDN);
+        // explicit timeout so we don't hang the UI forever.
+        rej(new Error('HEIC decoder took >30s to load. Check your connection.'));
+      }, HEIC2ANY_LOAD_TIMEOUT);
+      s.onload  = () => { clearTimeout(timer); res(window.heic2any); };
+      s.onerror = () => { clearTimeout(timer); rej(new Error('Could not load heic2any from CDN')); };
+      document.head.appendChild(s);
+    });
+  }
+  return _heic2anyPromise;
+}
+async function sniffIsHeic(file) {
+  // Cheap MIME-based check first.
+  const t = (file.type || '').toLowerCase();
+  if (t === 'image/heic' || t === 'image/heif') return true;
+  if (/\.(heic|heif)$/i.test(file.name || '')) return true;
+  // MIME may be empty / octet-stream on some Android/iOS pickers — sniff.
+  if (file.size < 12) return false;
+  const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  // ASCII bytes 4..11 are the ftyp box's major brand and minor version.
+  // Brand starts at byte 4; we check for any of the HEIC/HEIF/HEVC brands.
+  // (The 'ftyp' string itself is at bytes 4..7; the brand is bytes 8..11.)
+  if (head[4] !== 0x66 || head[5] !== 0x74 ||
+      head[6] !== 0x79 || head[7] !== 0x70) return false;
+  const brand = String.fromCharCode(head[8], head[9], head[10], head[11]).toLowerCase();
+  return brand === 'heic' || brand === 'heix' || brand === 'heim' ||
+         brand === 'heis' || brand === 'mif1' || brand === 'msf1' ||
+         brand === 'hevc' || brand === 'hevx';
+}
+/* Convert an HEIC File → JPEG Blob (q=0.92). On failure throws — caller
+   should surface a friendly error message. */
+async function heicToJpegBlob(file) {
+  const heic2any = await ensureHeic2Any();
+  const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+  // heic2any returns Blob OR Blob[] (for multi-image HEIC sequences / Live Photos).
+  return Array.isArray(out) ? out[0] : out;
+}
+
+/* Unified entry: image → compress; PDF → rasterize page 1; HEIC → try
+   native browser decode first (Safari + Chrome-on-iOS handle it in <1s),
+   fall back to libheif WASM if native decode fails. Output goes through
+   compressImage either way so the existing 2000-px long-edge resize +
+   re-encode at COMPRESS_QUALITY still applies — no surprise size jump
+   from raw camera-resolution iPhone photos.
    Returns the same {blob, width, height} shape as compressImage so the
    downstream upload path is unchanged. */
 async function prepareUpload(file) {
   if (isPdfFile(file)) return pdfToImage(file);
+  if (await sniffIsHeic(file)) {
+    if (file.size > HEIC_MAX_BYTES) {
+      throw new Error('HEIC photo too large (' + Math.round(file.size / 1024 / 1024)
+        + ' MB). Max 30 MB — try a lower-resolution photo.');
+    }
+    // Native HEIC decode path (iOS Safari, Chrome-on-iOS, macOS Safari).
+    // 1-2s instead of 5-8s of WASM decode. createImageBitmap throws on
+    // Chrome/Firefox/Edge desktop & Android — we fall through to heic2any.
+    try {
+      return await compressImage(file);
+    } catch (_native) { /* fall through to libheif fallback */ }
+    let jpegBlob;
+    try {
+      jpegBlob = await heicToJpegBlob(file);
+    } catch (e) {
+      throw new Error('Could not read HEIC photo. Try retaking with iPhone Settings → Camera → Formats → Most Compatible. (' + (e && e.message || e) + ')');
+    }
+    // Wrap as a File so compressImage's downstream code (which reads
+    // .type / .name in some paths) behaves identically to a JPEG upload.
+    const f = new File([jpegBlob],
+      (file.name || 'photo.heic').replace(/\.(heic|heif)$/i, '.jpg'),
+      { type: 'image/jpeg', lastModified: file.lastModified });
+    return compressImage(f);
+  }
   return compressImage(file);
 }
 
@@ -1261,11 +1361,26 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
   const preview = body.querySelector('#previewSingle');
   const saveBtn = body.querySelector('#saveBtn');
   wireSourcePicker(root, async (file) => {
-    const { blob, width, height } = await prepareUpload(file);
-    pendingBlob = blob; pendingMeta = { width, height, bytes: blob.size };
-    preview.src = URL.createObjectURL(blob);
-    preview.style.display = 'block';
-    saveBtn.disabled = false;
+    const statusEl = body.querySelector('#uploadStatus');
+    // HEIC conversion can take 2-5s on phones — without an explicit
+    // status the user thinks the app froze. PDF/JPEG are near-instant
+    // so the flash is harmless.
+    const willConvert = await sniffIsHeic(file);
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
+        + (willConvert ? 'Converting HEIC photo…' : 'Processing photo…') + '</div>';
+    }
+    try {
+      const { blob, width, height } = await prepareUpload(file);
+      pendingBlob = blob; pendingMeta = { width, height, bytes: blob.size };
+      preview.src = URL.createObjectURL(blob);
+      preview.style.display = 'block';
+      saveBtn.disabled = false;
+      if (statusEl) statusEl.innerHTML = '';
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = '<div class="status err">' + ((e && e.message) || String(e)) + '</div>';
+      throw e;
+    }
   });
   body.querySelector('#cancelBtn').onclick = () => closeModal();
   saveBtn.onclick = async () => {
@@ -1343,11 +1458,23 @@ function renderTwoStepUpload(body, modal, match, team, required) {
     const preview = body.querySelector('#previewStep');
     const nextBtn = body.querySelector('#nextBtn');
     wireSourcePicker(root, async (file) => {
-      const { blob, width, height } = await prepareUpload(file);
-      captures[which] = { blob, meta: { width, height, bytes: blob.size } };
-      preview.src = URL.createObjectURL(blob);
-      preview.style.display = 'block';
-      nextBtn.disabled = false;
+      const statusEl = body.querySelector('#uploadStatus');
+      const willConvert = await sniffIsHeic(file);
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
+          + (willConvert ? 'Converting HEIC photo…' : 'Processing photo…') + '</div>';
+      }
+      try {
+        const { blob, width, height } = await prepareUpload(file);
+        captures[which] = { blob, meta: { width, height, bytes: blob.size } };
+        preview.src = URL.createObjectURL(blob);
+        preview.style.display = 'block';
+        nextBtn.disabled = false;
+        if (statusEl) statusEl.innerHTML = '';
+      } catch (e) {
+        if (statusEl) statusEl.innerHTML = '<div class="status err">' + ((e && e.message) || String(e)) + '</div>';
+        throw e;
+      }
     });
     body.querySelector('#cancelBtn').onclick = () => {
       if (step === 1) closeModal();
