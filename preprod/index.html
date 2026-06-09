@@ -729,7 +729,9 @@ async function pdfToImage(file) {
    sequences = Live Photos). Take the first frame.
    Bundle is ~1.1MB so we lazy-load it only when an HEIC actually arrives.
 */
-const HEIC2ANY_URL = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+const HEIC2ANY_URL          = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+const HEIC2ANY_LOAD_TIMEOUT = 30_000;  // 30s — captive portals / Brave shields
+const HEIC_MAX_BYTES        = 30 * 1024 * 1024;  // 30 MB — guard libheif OOM on phones
 let _heic2anyPromise = null;
 function ensureHeic2Any() {
   if (!_heic2anyPromise) {
@@ -737,8 +739,13 @@ function ensureHeic2Any() {
       if (window.heic2any) return res(window.heic2any);
       const s = document.createElement('script');
       s.src = HEIC2ANY_URL;
-      s.onload  = () => res(window.heic2any);
-      s.onerror = () => rej(new Error('Could not load heic2any from CDN'));
+      const timer = setTimeout(() => {
+        // onerror doesn't fire for stalled loads (captive portal, blocked CDN);
+        // explicit timeout so we don't hang the UI forever.
+        rej(new Error('HEIC decoder took >30s to load. Check your connection.'));
+      }, HEIC2ANY_LOAD_TIMEOUT);
+      s.onload  = () => { clearTimeout(timer); res(window.heic2any); };
+      s.onerror = () => { clearTimeout(timer); rej(new Error('Could not load heic2any from CDN')); };
       document.head.appendChild(s);
     });
   }
@@ -762,8 +769,6 @@ async function sniffIsHeic(file) {
          brand === 'heis' || brand === 'mif1' || brand === 'msf1' ||
          brand === 'hevc' || brand === 'hevx';
 }
-function isHeicFile(file) { return file && sniffIsHeic(file); }   // returns Promise<bool>
-
 /* Convert an HEIC File → JPEG Blob (q=0.92). On failure throws — caller
    should surface a friendly error message. */
 async function heicToJpegBlob(file) {
@@ -773,15 +778,27 @@ async function heicToJpegBlob(file) {
   return Array.isArray(out) ? out[0] : out;
 }
 
-/* Unified entry: image → compress; PDF → rasterize page 1; HEIC → decode
-   to JPEG, then compress (so the existing 2000-px long-edge resize +
+/* Unified entry: image → compress; PDF → rasterize page 1; HEIC → try
+   native browser decode first (Safari + Chrome-on-iOS handle it in <1s),
+   fall back to libheif WASM if native decode fails. Output goes through
+   compressImage either way so the existing 2000-px long-edge resize +
    re-encode at COMPRESS_QUALITY still applies — no surprise size jump
-   from raw camera-resolution iPhone photos).
+   from raw camera-resolution iPhone photos.
    Returns the same {blob, width, height} shape as compressImage so the
    downstream upload path is unchanged. */
 async function prepareUpload(file) {
   if (isPdfFile(file)) return pdfToImage(file);
   if (await sniffIsHeic(file)) {
+    if (file.size > HEIC_MAX_BYTES) {
+      throw new Error('HEIC photo too large (' + Math.round(file.size / 1024 / 1024)
+        + ' MB). Max 30 MB — try a lower-resolution photo.');
+    }
+    // Native HEIC decode path (iOS Safari, Chrome-on-iOS, macOS Safari).
+    // 1-2s instead of 5-8s of WASM decode. createImageBitmap throws on
+    // Chrome/Firefox/Edge desktop & Android — we fall through to heic2any.
+    try {
+      return await compressImage(file);
+    } catch (_native) { /* fall through to libheif fallback */ }
     let jpegBlob;
     try {
       jpegBlob = await heicToJpegBlob(file);
@@ -1351,7 +1368,7 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
     const willConvert = await sniffIsHeic(file);
     if (statusEl) {
       statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
-        + (willConvert ? 'Converting iPhone photo…' : 'Processing photo…') + '</div>';
+        + (willConvert ? 'Converting HEIC photo…' : 'Processing photo…') + '</div>';
     }
     try {
       const { blob, width, height } = await prepareUpload(file);
@@ -1445,7 +1462,7 @@ function renderTwoStepUpload(body, modal, match, team, required) {
       const willConvert = await sniffIsHeic(file);
       if (statusEl) {
         statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
-          + (willConvert ? 'Converting iPhone photo…' : 'Processing photo…') + '</div>';
+          + (willConvert ? 'Converting HEIC photo…' : 'Processing photo…') + '</div>';
       }
       try {
         const { blob, width, height } = await prepareUpload(file);
