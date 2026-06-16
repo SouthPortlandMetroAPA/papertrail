@@ -168,6 +168,17 @@
   .rs-status { font-size: 0.78rem; margin-top: 8px; min-height: 1.2em; }
   .rs-status.err { color: var(--bad); }
   .rs-status.ok  { color: var(--ok); }
+  /* 2.12: tap-to-expand reschedule (progressive disclosure for an edge
+     case). Collapsed = one-line link; opened = the existing .rs-form. */
+  .rs-collapsed { margin-top: 14px; }
+  .rs-toggle {
+    width: 100%; text-align: left;
+    background: transparent; border: none; cursor: pointer;
+    padding: 8px 4px; font: inherit; font-size: 0.85rem;
+    color: var(--spm-blue); font-weight: 700;
+  }
+  .rs-toggle:hover { text-decoration: underline; }
+  .rs-collapsed .rs-form { margin-top: 6px; }
 
   /* ── Upload modal ─────────────────────────────────────────────── */
   .modal-backdrop {
@@ -216,38 +227,30 @@
     border: 2px solid #bbf7d0;
   }
 
-  /* ── Match-teams block (modal header, 2.4+) ────────────────────────
-     Both teams side-by-side with HOME/AWAY pills + team #/name.
-     The captain's own team gets a subtle highlight so "who am I?" is
-     unambiguous. Stacks vertically on narrow screens. */
-  .match-teams {
-    display: flex; align-items: center; gap: 10px;
-    margin: 6px 0 14px;
-    flex-wrap: wrap;
-  }
-  .match-team {
+  /* ── Match header (modal, 2.12) — compact text rows ──────────────────
+     Replaces the two big tile cards from 2.4. The captain already knew
+     it was their match against that opponent (they clicked into it);
+     the cards spent ~250px of viewport repeating that. Three text rows
+     now: Week · date, "YOU · HOME/AWAY · MyTeam", "vs · OppTeam · #". */
+  .match-line {
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px; border-radius: 10px;
-    background: #f6f8fb; border: 1px solid #e4e9f1;
-    flex: 1 1 220px; min-width: 0;
+    margin: 4px 0; font-size: 0.92rem; min-width: 0;
   }
-  .match-team.mine {
-    background: #eef4ff; border-color: #c7d6f5;
-    box-shadow: inset 0 0 0 1px #c7d6f5;
+  .match-line .m-name {
+    font-weight: 700; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .ha-pill {
+  .match-line .m-tno { color: var(--text-dim); font-weight: 600; font-size: 0.84rem; }
+  .match-line.opp .m-name { font-weight: 600; }
+  .me-pill {
     display: inline-block; padding: 2px 8px; border-radius: 999px;
     font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
-    color: #fff;
+    background: var(--spm-blue); color: #fff; flex-shrink: 0;
   }
-  .ha-pill.home { background: #16a34a; }
-  .ha-pill.away { background: #f59e0b; }
-  .match-team .t-no   { font-weight: 800; font-size: 0.92rem; color: var(--text-dim); white-space: nowrap; }
-  .match-team .t-name { font-weight: 700; font-size: 0.95rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .match-vs { font-weight: 800; color: var(--text-dim); font-size: 0.92rem; text-align: center; flex: 0 0 auto; padding: 0 2px; }
-  @media (max-width: 480px) {
-    .match-teams { flex-direction: column; align-items: stretch; gap: 6px; }
-    .match-vs { display: none; }
+  .vs-tag {
+    font-size: 0.74rem; font-weight: 700; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    width: 56px; flex-shrink: 0; padding-left: 4px;
   }
 
   .step-pill {
@@ -1211,24 +1214,34 @@ function decorateModalForReschedule(body, match, team) {
     return;
   }
 
-  // Not yet rescheduled — append the offer.
-  const form = document.createElement('div');
-  form.className = 'rs-form';
-  form.innerHTML = `
-    <div class="rs-form-title">📅 Was this match rescheduled?</div>
-    <div class="rs-form-hint">If the match got moved and you can't upload yet, mark it here. Pick the new night, or tap "No date yet" if it isn't set.</div>
-    <div class="rs-controls">
-      <input type="date" id="rsDateInput" />
-      <button type="button" class="btn btn-primary" id="rsSaveBtn">Mark with date</button>
-      <button type="button" class="btn btn-outline" id="rsNoDateBtn">No date yet</button>
-    </div>
-    <div id="rsStatus" class="rs-status"></div>`;
-  body.appendChild(form);
+  // Not yet rescheduled — append a collapsed link. 2.12: reschedule is
+  // an edge case (<5% of matches); the full form ate ~250px of viewport
+  // and visually competed with the upload buttons. Now hidden behind a
+  // single tap. Progressive disclosure per 2026 mobile-first patterns.
+  const wrap = document.createElement('div');
+  wrap.className = 'rs-collapsed';
+  wrap.innerHTML = `
+    <button type="button" class="rs-toggle" id="rsToggle">📅 Match was rescheduled?</button>
+    <div class="rs-form" id="rsForm" style="display:none;">
+      <div class="rs-controls">
+        <input type="date" id="rsDateInput" />
+        <button type="button" class="btn btn-primary" id="rsSaveBtn">Set new date</button>
+        <button type="button" class="btn btn-outline" id="rsNoDateBtn">Date TBD</button>
+      </div>
+      <div id="rsStatus" class="rs-status"></div>
+    </div>`;
+  body.appendChild(wrap);
 
-  form.querySelector('#rsSaveBtn').onclick = () =>
+  wrap.querySelector('#rsToggle').onclick = () => {
+    const f = wrap.querySelector('#rsForm');
+    const open = f.style.display !== 'none';
+    f.style.display = open ? 'none' : 'block';
+    wrap.querySelector('#rsToggle').setAttribute('aria-expanded', String(!open));
+  };
+  wrap.querySelector('#rsSaveBtn').onclick = () =>
     doMarkRescheduled(match.id, team,
-      form.querySelector('#rsDateInput').value || null);
-  form.querySelector('#rsNoDateBtn').onclick = () =>
+      wrap.querySelector('#rsDateInput').value || null);
+  wrap.querySelector('#rsNoDateBtn').onclick = () =>
     doMarkRescheduled(match.id, team, null);
 }
 
@@ -1330,36 +1343,30 @@ function closeModal() {
   document.getElementById('uploadModalBody').innerHTML = '';
 }
 function modalHeader(match, team) {
-  /* 2.4+: show BOTH teams clearly. Previously the header only named
-     the opponent ("Week N · vs X") with HOME/AWAY tucked on the next
-     line — captains kept asking "wait, who's who again?", especially
-     for new captains and across divisions. Both team numbers + names
-     now appear side-by-side, with the captain's team highlighted. */
+  /* 2.12: compact text rows instead of two tile cards. The cards from 2.4
+     ate ~40% of the modal viewport for info the captain already knew
+     (they had to click into THIS match to be here). Same info, ~80px
+     instead of ~250px:
+
+       Week 5 · Sat 6/14/2026
+       You (AWAY) · Three Blind Mice
+       vs. #9204 Receding Hairlines
+
+     "You (AWAY)" puts the captain's team first regardless of home/away
+     so they don't have to read both labels to find themselves. */
   const meIsHome = match.home_team_id === team.team_id;
   const homeT = match.home_team || {};
   const awayT = match.away_team || {};
+  const myT   = meIsHome ? homeT : awayT;
+  const oppT  = meIsHome ? awayT : homeT;
   const dateLabel = esc(fmtShortDate(match.scheduled_date));
-  const wk = (match.week_number != null) ? ('Week ' + match.week_number + ' &middot; ') : '';
-
-  const homeBlock = `
-    <div class="match-team ${meIsHome ? 'mine' : ''}">
-      <span class="ha-pill home">HOME</span>
-      <span class="t-no">#${esc(homeT.team_number || '?')}</span>
-      <span class="t-name">${esc(homeT.team_name || '—')}</span>
-    </div>`;
-  const awayBlock = `
-    <div class="match-team ${!meIsHome ? 'mine' : ''}">
-      <span class="ha-pill away">AWAY</span>
-      <span class="t-no">${esc(awayT.team_number || '?')}</span>
-      <span class="t-name">${esc(awayT.team_name || '—')}</span>
-    </div>`;
-
+  const wk = (match.week_number != null) ? ('Week ' + match.week_number + ' · ') : '';
   return `<h3>${wk}${dateLabel}</h3>
-    <div class="match-teams">
-      ${homeBlock}
-      <div class="match-vs">vs</div>
-      ${awayBlock}
-    </div>`;
+    <div class="match-line"><span class="me-pill">YOU · ${meIsHome ? 'HOME' : 'AWAY'}</span>
+      <span class="m-name">${esc(myT.team_name || '—')}</span></div>
+    <div class="match-line opp"><span class="vs-tag">vs</span>
+      <span class="m-name">${esc(oppT.team_name || '—')}</span>
+      <span class="m-tno">#${esc(oppT.team_number || '?')}</span></div>`;
 }
 
 /* Auto-upload-on-pick flow (2.11). The previous design required the
