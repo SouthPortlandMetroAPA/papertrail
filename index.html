@@ -1410,7 +1410,7 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
       <input type="file" accept="image/*,application/pdf"                       data-input="library">
     </div>
     <div id="uploadStatus"></div>`;
-  body.querySelector('#modalX').onclick = () => closeModal();
+  body.querySelector('#modalX').onclick = () => { closeModal(); render(); };
   const root = body.querySelector('#czSingle');
   let busy = false;
   wireSourcePicker(root, async (file) => {
@@ -1438,16 +1438,15 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
       /* 2.4+: uploading a scoresheet means the match was played → clear
          the rescheduled flag if it was set. Non-blocking. */
       await autoClearRescheduleAfterUpload(match, team);
-      /* 2.14: keep the modal open for ~1.8s after success showing a
-         green ✓ chip. Captains were unsure whether the upload actually
-         worked when the modal vanished instantly — same visual language
-         as the doubles flow's per-side checkmark. The X close stays
-         enabled so they can dismiss sooner if they want. */
+      /* 2.15: no auto-close. Modal stays open with a ✓ Saved chip until
+         the captain taps ✕. (Auto-close was confusing — they couldn't
+         tell whether their tap had triggered the dismiss or whether the
+         upload had something to do with it.) The ✕ handler runs
+         render() so the match list reflects the upload on close. */
       body.querySelector('.source-picker').outerHTML =
-        '<div class="side-done">✓ Saved</div>';
+        '<div class="side-done">✓ Saved · tap ✕ to close</div>';
       if (statusEl) statusEl.innerHTML = '';
       toast('Saved');
-      setTimeout(() => { closeModal(); render(); }, 1800);
     } catch (e) {
       logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
         side, error_message: (e && e.message || String(e)).slice(0, 250) });
@@ -1470,13 +1469,10 @@ function renderTwoStepUpload(body, modal, match, team, required) {
   const uploaded = {};   // 'front' | 'back' → true once stored
 
   function maybeAutoClose() {
-    if (required.every(s => uploaded[s])) {
-      setTimeout(() => {
-        closeModal();
-        toast('Saved (front + back)');
-        render();
-      }, 1800);   // 2.14: longer dwell so captain has time to see ✓
-    }
+    /* 2.15: no auto-close. Captain dismisses with ✕ when ready.
+       toast() still fires once both sides are done so they get
+       passive acknowledgement without losing the modal. */
+    if (required.every(s => uploaded[s])) toast('Saved (front + back)');
   }
 
   function renderSide(s) {
@@ -1543,7 +1539,7 @@ function renderTwoStepUpload(body, modal, match, team, required) {
           ${renderSide(s)}
         </div>`).join('')}
       <div id="uploadStatus"></div>`;
-    body.querySelector('#modalX').onclick = () => closeModal();
+    body.querySelector('#modalX').onclick = () => { closeModal(); render(); };
     required.forEach(s => attachSide(s));
   }
   renderAll();
