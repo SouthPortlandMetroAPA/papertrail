@@ -9,4 +9,4 @@
         - Prod row:    app_name='PaperTrail'. promote.sh syncs it.
      3. git push.
    ════════════════════════════════════════════════════════════════════════ */
-window.APP_VERSION = '2.10';
+window.APP_VERSION = '2.11';

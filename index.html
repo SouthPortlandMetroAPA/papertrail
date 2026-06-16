@@ -185,6 +185,36 @@
   }
   .modal h3 { margin: 0 0 6px; font-size: 1.1rem; font-weight: 800; }
   .modal .sub { color: var(--text-dim); font-size: 0.86rem; margin: 0 0 14px; }
+  /* Upload-modal X close (top-right). Replaces the "Cancel" button row
+     so the upload affordance owns more of the viewport. */
+  .modal { position: relative; }
+  .modal-x {
+    position: absolute; top: 8px; right: 10px;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: transparent; cursor: pointer;
+    font-size: 1.4rem; line-height: 1; color: var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-x:hover { background: #f1f3f7; color: var(--text); }
+  /* Larger source buttons — primary action gets viewport priority on
+     mobile where the previous layout pushed the Save button below the
+     fold. 2.11: removed thumbnail preview + Save button entirely; the
+     upload fires the instant a file is picked. */
+  .source-picker .source-btn { padding: 28px 10px; }
+  /* Per-side status block for the doubles two-up layout (front+back).
+     Each side is one row with the take/library buttons OR a green ✓. */
+  .side-block { margin-bottom: 12px; }
+  .side-block:last-child { margin-bottom: 0; }
+  .side-block-label {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.78rem; font-weight: 800; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  .side-done {
+    text-align: center; padding: 18px 10px; border-radius: 12px;
+    background: #f0fdf4; color: var(--ok); font-weight: 700;
+    border: 2px solid #bbf7d0;
+  }
 
   /* ── Match-teams block (modal header, 2.4+) ────────────────────────
      Both teams side-by-side with HOME/AWAY pills + team #/name.
@@ -989,7 +1019,6 @@ async function renderHome(root) {
   root.innerHTML = `
     <div class="card">
       <h2>Your paper-scored teams &mdash; ${esc(state.session.name)}</h2>
-      <p class="hint">Tap a team to see its schedule and upload scoresheet photos.</p>
       <div class="team-buttons" style="margin-top:12px;">${buttons}</div>
     </div>`;
   root.querySelectorAll('.team-btn').forEach(btn => {
@@ -1333,73 +1362,58 @@ function modalHeader(match, team) {
     </div>`;
 }
 
+/* Auto-upload-on-pick flow (2.11). The previous design required the
+   user to (a) pick a file, (b) verify a small thumbnail, (c) tap Save.
+   Captains were closing the modal at step (b) thinking it was done, and
+   the Save button often sat below the fold on mobile because the
+   thumbnail bloated the modal height. New flow: tap a source button →
+   file picker → upload starts immediately → toast on success. The
+   thumbnail is gone (too small to verify on a phone anyway), the Save
+   button is gone, the Cancel button is replaced by an X in the corner. */
 function renderSinglePhotoUpload(body, modal, match, team, side) {
   body.innerHTML = `
+    <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
     ${modalHeader(match, team)}
     <div class="source-picker" id="czSingle">
       <button type="button" class="source-btn" data-source="camera">
         <div class="source-icon">📷</div>
         <div class="source-label">Take photo</div>
-        <div class="source-sub">Opens the camera</div>
       </button>
       <button type="button" class="source-btn" data-source="library">
         <div class="source-icon">🖼️</div>
-        <div class="source-label">Choose from library</div>
-        <div class="source-sub">Photo or PDF</div>
+        <div class="source-label">Library</div>
       </button>
       <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
       <input type="file" accept="image/*,application/pdf"                       data-input="library">
     </div>
-    <img class="preview-img" id="previewSingle" style="display:none;" alt="">
-    <div id="uploadStatus"></div>
-    <div class="btn-row" style="margin-top:14px;">
-      <button class="btn btn-outline" id="cancelBtn">Cancel</button>
-      <button class="btn btn-primary" id="saveBtn" disabled style="margin-left:auto;">Save</button>
-    </div>`;
-  let pendingBlob = null, pendingMeta = null;
+    <div id="uploadStatus"></div>`;
+  body.querySelector('#modalX').onclick = () => closeModal();
   const root = body.querySelector('#czSingle');
-  const preview = body.querySelector('#previewSingle');
-  const saveBtn = body.querySelector('#saveBtn');
+  let busy = false;
   wireSourcePicker(root, async (file) => {
+    if (busy) return; busy = true;
     const statusEl = body.querySelector('#uploadStatus');
-    // HEIC conversion can take 2-5s on phones — without an explicit
-    // status the user thinks the app froze. PDF/JPEG are near-instant
-    // so the flash is harmless.
     const willConvert = await sniffIsHeic(file);
     if (statusEl) {
       statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
         + (willConvert ? 'Converting HEIC photo…' : 'Processing photo…') + '</div>';
     }
+    logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id, side });
     try {
       const { blob, width, height } = await prepareUpload(file);
-      pendingBlob = blob; pendingMeta = { width, height, bytes: blob.size };
-      preview.src = URL.createObjectURL(blob);
-      preview.style.display = 'block';
-      saveBtn.disabled = false;
-      if (statusEl) statusEl.innerHTML = '';
-    } catch (e) {
-      if (statusEl) statusEl.innerHTML = '<div class="status err">' + ((e && e.message) || String(e)) + '</div>';
-      throw e;
-    }
-  });
-  body.querySelector('#cancelBtn').onclick = () => closeModal();
-  saveBtn.onclick = async () => {
-    if (!pendingBlob) return;
-    saveBtn.disabled = true;
-    body.querySelector('#uploadStatus').innerHTML =
-      '<div class="status progress"><span class="spinner"></span>Uploading…</div>';
-    logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id,
-      side, bytes: pendingMeta.bytes });
-    try {
+      const meta = { width, height, bytes: blob.size };
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>Uploading…</div>';
+      }
       const path = r2PathFor(match.id, team.team_id, side);
-      await uploadToR2(path, pendingBlob);
-      await recordPhotoInDb(match.id, team.team_id, side, path, pendingMeta);
+      await uploadToR2(path, blob);
+      await recordPhotoInDb(match.id, team.team_id, side, path, meta);
       logAction('upload_db', { ok: true, team_id: team.team_id, match_id: match.id,
-        side, r2_path: path, bytes: pendingMeta.bytes });
+        side, r2_path: path, bytes: meta.bytes });
       logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
         side, r2_path: path });
-      /* 2.4+: uploading a scoresheet means the match was played →
-         clear the rescheduled flag if it was set. Non-blocking. */
+      /* 2.4+: uploading a scoresheet means the match was played → clear
+         the rescheduled flag if it was set. Non-blocking. */
       await autoClearRescheduleAfterUpload(match, team);
       closeModal();
       toast('Saved');
@@ -1407,113 +1421,102 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
     } catch (e) {
       logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
         side, error_message: (e && e.message || String(e)).slice(0, 250) });
-      body.querySelector('#uploadStatus').innerHTML =
-        '<div class="status error">' + esc(e.message) + '</div>';
-      saveBtn.disabled = false;
+      if (statusEl) statusEl.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+      busy = false;   // let the user retry
     }
-  };
+  });
 }
 
-/* ── 9-Ball atomic 2-step wizard ──────────────────────────────────── */
+/* ── 9-Ball doubles upload (front + back) ──────────────────────────────
+   2.11: dropped the atomic "save both at once" wizard. Each side now
+   uploads independently the instant a file is picked, with a green ✓
+   replacing the buttons when done. Once both sides are checkmarks, the
+   modal auto-closes with a toast. Captains who upload only one side and
+   close the modal get the partial state saved — the match row will show
+   "1 of 2 uploaded" and they can come back to finish the other side.
+   This eliminates the prior Next / Save Both button chain (3-4 taps)
+   and the thumbnail previews that pushed buttons below the fold. */
 function renderTwoStepUpload(body, modal, match, team, required) {
-  let step = 1;
-  const captures = {};  // 'front' | 'back' → { blob, meta }
+  const uploaded = {};   // 'front' | 'back' → true once stored
 
-  function renderStep() {
-    const which = required[step - 1];
-    body.innerHTML = `
-      ${modalHeader(match, team)}
-      <div class="step-pill">Step ${step} of 2 &middot; ${which.toUpperCase()} of scoresheet</div>
-      <p class="sub">Both pages required — nothing is saved until both are captured.</p>
-      <div class="source-picker" id="czStep">
-        <button type="button" class="source-btn" data-source="camera">
-          <div class="source-icon">📷</div>
-          <div class="source-label">Take photo</div>
-          <div class="source-sub">${esc(which)} page</div>
-        </button>
-        <button type="button" class="source-btn" data-source="library">
-          <div class="source-icon">🖼️</div>
-          <div class="source-label">Choose from library</div>
-          <div class="source-sub">${esc(which)} page</div>
-        </button>
-        <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
-        <input type="file" accept="image/*,application/pdf"                       data-input="library">
-      </div>
-      <img class="preview-img" id="previewStep" style="display:none;" alt="">
-      <div id="uploadStatus"></div>
-      <div class="btn-row" style="margin-top:14px;">
-        <button class="btn btn-outline" id="cancelBtn">${step === 1 ? 'Cancel' : '‹ Back'}</button>
-        <button class="btn btn-primary" id="nextBtn" disabled style="margin-left:auto;">
-          ${step === 2 ? 'Save both' : 'Next: back page ›'}
-        </button>
-      </div>`;
-    // If we already have a capture for this step (e.g. came back from step 2), show it
-    if (captures[which]) {
-      const prev = body.querySelector('#previewStep');
-      prev.src = URL.createObjectURL(captures[which].blob);
-      prev.style.display = 'block';
-      body.querySelector('#nextBtn').disabled = false;
+  function maybeAutoClose() {
+    if (required.every(s => uploaded[s])) {
+      setTimeout(() => {
+        closeModal();
+        toast('Saved (front + back)');
+        render();
+      }, 350);   // brief pause so the second ✓ is visible
     }
-    const root = body.querySelector('#czStep');
-    const preview = body.querySelector('#previewStep');
-    const nextBtn = body.querySelector('#nextBtn');
+  }
+
+  function renderSide(s) {
+    return uploaded[s]
+      ? `<div class="side-done">✓ ${s.charAt(0).toUpperCase() + s.slice(1)} uploaded</div>`
+      : `<div class="source-picker" data-side="${s}">
+           <button type="button" class="source-btn" data-source="camera">
+             <div class="source-icon">📷</div>
+             <div class="source-label">Take photo</div>
+           </button>
+           <button type="button" class="source-btn" data-source="library">
+             <div class="source-icon">🖼️</div>
+             <div class="source-label">Library</div>
+           </button>
+           <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
+           <input type="file" accept="image/*,application/pdf"                       data-input="library">
+         </div>`;
+  }
+
+  function attachSide(s) {
+    const root = body.querySelector('.source-picker[data-side="' + s + '"]');
+    if (!root) return;   // already a checkmark
+    let busy = false;
     wireSourcePicker(root, async (file) => {
+      if (busy) return; busy = true;
       const statusEl = body.querySelector('#uploadStatus');
       const willConvert = await sniffIsHeic(file);
       if (statusEl) {
         statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
-          + (willConvert ? 'Converting HEIC photo…' : 'Processing photo…') + '</div>';
+          + (willConvert ? 'Converting HEIC photo…' : 'Uploading ' + s + '…') + '</div>';
       }
+      logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id, side: s });
       try {
         const { blob, width, height } = await prepareUpload(file);
-        captures[which] = { blob, meta: { width, height, bytes: blob.size } };
-        preview.src = URL.createObjectURL(blob);
-        preview.style.display = 'block';
-        nextBtn.disabled = false;
-        if (statusEl) statusEl.innerHTML = '';
-      } catch (e) {
-        if (statusEl) statusEl.innerHTML = '<div class="status err">' + ((e && e.message) || String(e)) + '</div>';
-        throw e;
-      }
-    });
-    body.querySelector('#cancelBtn').onclick = () => {
-      if (step === 1) closeModal();
-      else { step = 1; renderStep(); }
-    };
-    nextBtn.onclick = async () => {
-      if (step === 1) { step = 2; renderStep(); return; }
-      nextBtn.disabled = true;
-      body.querySelector('#uploadStatus').innerHTML =
-        '<div class="status progress"><span class="spinner"></span>Saving both pages…</div>';
-      logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id,
-        side: 'front+back',
-        bytes: (captures.front && captures.front.meta.bytes || 0) + (captures.back && captures.back.meta.bytes || 0) });
-      try {
-        for (const s of required) {
-          const c = captures[s];
-          const path = r2PathFor(match.id, team.team_id, s);
-          await uploadToR2(path, c.blob);
-          await recordPhotoInDb(match.id, team.team_id, s, path, c.meta);
-          logAction('upload_db', { ok: true, team_id: team.team_id, match_id: match.id,
-            side: s, r2_path: path, bytes: c.meta.bytes });
-        }
-        logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id, side: 'front+back' });
-        /* 2.4+: uploading a scoresheet means the match was played →
-           clear the rescheduled flag if it was set. Non-blocking. */
+        const meta = { width, height, bytes: blob.size };
+        const path = r2PathFor(match.id, team.team_id, s);
+        await uploadToR2(path, blob);
+        await recordPhotoInDb(match.id, team.team_id, s, path, meta);
+        logAction('upload_db', { ok: true, team_id: team.team_id, match_id: match.id,
+          side: s, r2_path: path, bytes: meta.bytes });
+        logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
+          side: s, r2_path: path });
+        uploaded[s] = true;
         await autoClearRescheduleAfterUpload(match, team);
-        closeModal();
-        toast('Saved (front + back)');
-        render();
+        if (statusEl) statusEl.innerHTML = '';
+        renderAll();        // swap this side's buttons for ✓
+        maybeAutoClose();
       } catch (e) {
         logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
-          error_message: (e && e.message || String(e)).slice(0, 250) });
-        body.querySelector('#uploadStatus').innerHTML =
-          '<div class="status error">' + esc(e.message) + '</div>';
-        nextBtn.disabled = false;
+          side: s, error_message: (e && e.message || String(e)).slice(0, 250) });
+        if (statusEl) statusEl.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+        busy = false;
       }
-    };
+    });
   }
-  renderStep();
+
+  function renderAll() {
+    body.innerHTML = `
+      <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
+      ${modalHeader(match, team)}
+      ${required.map(s => `
+        <div class="side-block">
+          <div class="side-block-label">${s.charAt(0).toUpperCase() + s.slice(1)} page</div>
+          ${renderSide(s)}
+        </div>`).join('')}
+      <div id="uploadStatus"></div>`;
+    body.querySelector('#modalX').onclick = () => closeModal();
+    required.forEach(s => attachSide(s));
+  }
+  renderAll();
 }
 
 /* ── Review mode: existing photos, view + delete ───────────────────── */
@@ -1529,19 +1532,16 @@ function renderReviewMode(body, modal, match, team, existingPhotos) {
       </div>
     </div>`).join('');
   body.innerHTML = `
+    <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
     ${modalHeader(match, team)}
-    <p class="sub">Tap a photo to view full-size. Tap Delete to remove.</p>
-    <div class="photo-grid" style="margin-top:8px;">${photosHtml}</div>
-    <div class="btn-row" style="margin-top:14px;">
-      <button class="btn btn-primary" id="doneBtn" style="margin-left:auto;">Done</button>
-    </div>`;
+    <div class="photo-grid" style="margin-top:8px;">${photosHtml}</div>`;
+  body.querySelector('#modalX').onclick = () => closeModal();
   body.querySelectorAll('.ph-img').forEach(img => {
     img.onclick = () => openLightbox(img.dataset.photoUrl);
   });
   body.querySelectorAll('[data-del-id]').forEach(b => {
     b.onclick = () => askDelete(parseInt(b.dataset.delId, 10), b.dataset.delPath);
   });
-  body.querySelector('#doneBtn').onclick = () => closeModal();
 }
 
 /* ── Custom delete-confirmation modal ──────────────────────────────── */
