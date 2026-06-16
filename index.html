@@ -168,17 +168,30 @@
   .rs-status { font-size: 0.78rem; margin-top: 8px; min-height: 1.2em; }
   .rs-status.err { color: var(--bad); }
   .rs-status.ok  { color: var(--ok); }
-  /* 2.12: tap-to-expand reschedule (progressive disclosure for an edge
-     case). Collapsed = one-line link; opened = the existing .rs-form. */
+  /* 2.12: tap-to-expand reschedule (progressive disclosure). 2.13:
+     beefed the toggle's affordance — was a plain blue-text link with
+     no border/background, didn't telegraph "tappable" on mobile. Now a
+     soft-tinted card with a dashed border + rotating chevron. Same
+     visual language as the inner .rs-form so the disclosure feels
+     like the same control just collapsing/expanding. */
   .rs-collapsed { margin-top: 14px; }
   .rs-toggle {
-    width: 100%; text-align: left;
-    background: transparent; border: none; cursor: pointer;
-    padding: 8px 4px; font: inherit; font-size: 0.85rem;
-    color: var(--spm-blue); font-weight: 700;
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 12px 14px; min-height: 44px;
+    background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px;
+    cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 700;
+    color: #1e40af; text-align: left;
   }
-  .rs-toggle:hover { text-decoration: underline; }
-  .rs-collapsed .rs-form { margin-top: 6px; }
+  .rs-toggle:hover  { background: #dbeafe; }
+  .rs-toggle:active { transform: scale(0.99); }
+  .rs-chev {
+    font-size: 0.85rem; color: #1e40af; opacity: 0.7;
+    transition: transform 0.18s ease;
+    flex-shrink: 0;
+  }
+  .rs-toggle[aria-expanded="true"]              { border-radius: 10px 10px 0 0; border-bottom: none; }
+  .rs-toggle[aria-expanded="true"] .rs-chev     { transform: rotate(180deg); }
+  .rs-collapsed .rs-form { margin-top: 0; border-radius: 0 0 10px 10px; border-top: none; }
 
   /* ── Upload modal ─────────────────────────────────────────────── */
   .modal-backdrop {
@@ -1221,7 +1234,10 @@ function decorateModalForReschedule(body, match, team) {
   const wrap = document.createElement('div');
   wrap.className = 'rs-collapsed';
   wrap.innerHTML = `
-    <button type="button" class="rs-toggle" id="rsToggle">📅 Match was rescheduled?</button>
+    <button type="button" class="rs-toggle" id="rsToggle" aria-expanded="false">
+      <span>📅 Match was rescheduled?</span>
+      <span class="rs-chev" aria-hidden="true">▾</span>
+    </button>
     <div class="rs-form" id="rsForm" style="display:none;">
       <div class="rs-controls">
         <input type="date" id="rsDateInput" />
