@@ -225,6 +225,73 @@
      fold. 2.11: removed thumbnail preview + Save button entirely; the
      upload fires the instant a file is picked. */
   .source-picker .source-btn { padding: 28px 10px; }
+  /* 2.16: single primary "Submit scoresheet" button. Tap opens a
+     bottom-sheet popup with Camera / Library options (iOS Action Sheet
+     pattern). Replaces the inline two-button picker — one obvious CTA
+     instead of a parallel choice the captain has to evaluate. */
+  .primary-upload {
+    width: 100%; padding: 20px 14px;
+    border: none; border-radius: 12px; cursor: pointer;
+    background: var(--spm-blue, #1d3aa3); color: #fff;
+    font-family: inherit; font-size: 1.05rem; font-weight: 800;
+    letter-spacing: 0.02em;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: filter 0.12s, transform 0.04s;
+  }
+  .primary-upload:hover  { filter: brightness(1.08); }
+  .primary-upload:active { transform: scale(0.99); }
+  .primary-upload .pu-icon { font-size: 1.4rem; line-height: 1; }
+  /* Bottom-sheet action picker. On mobile slides up from the bottom,
+     full-width. On desktop it centers and floats. Backdrop click +
+     cancel button both dismiss. */
+  .source-sheet {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: pcFadeIn 0.16s ease;
+  }
+  .source-sheet[hidden] { display: none !important; }
+  .source-sheet-card {
+    background: #fff;
+    width: 100%; max-width: 540px;
+    border-radius: 16px 16px 0 0;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
+    animation: pcSlideUp 0.22s cubic-bezier(.2,.7,.2,1);
+  }
+  .source-sheet-title {
+    font-size: 0.74rem; font-weight: 800; color: var(--text-dim);
+    text-align: center; padding: 6px 0 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .ul-opt {
+    width: 100%; padding: 16px 14px; margin-bottom: 8px;
+    border: 1px solid var(--border, #e4e9f1); border-radius: 12px;
+    background: #fff; cursor: pointer;
+    font-family: inherit; font-size: 1rem; font-weight: 700;
+    display: flex; align-items: center; gap: 14px;
+    color: var(--text);
+    transition: background-color 0.12s;
+  }
+  .ul-opt:hover  { background: #f6f8fb; }
+  .ul-opt:active { transform: scale(0.99); }
+  .ul-opt .ul-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+  .ul-opt.cancel {
+    background: #f6f8fb; color: var(--text-dim);
+    justify-content: center; margin-top: 4px; margin-bottom: 0;
+    font-weight: 700;
+  }
+  .ul-opt.cancel:hover { background: #eef0f5; }
+  @keyframes pcFadeIn  { from { opacity: 0;                 } to { opacity: 1; } }
+  @keyframes pcSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    .source-sheet, .source-sheet-card { animation: none; }
+  }
+  /* Desktop: float the card in the middle instead of bottom-sheet. */
+  @media (min-width: 600px) {
+    .source-sheet { align-items: center; }
+    .source-sheet-card { border-radius: 14px; max-width: 420px; padding: 14px; }
+  }
   /* Per-side status block for the doubles two-up layout (front+back).
      Each side is one row with the take/library buttons OR a green ✓. */
   .side-block { margin-bottom: 12px; }
@@ -703,6 +770,43 @@ function wireSourcePicker(rootEl, onPick) {
   };
   if (cameraIn)  cameraIn.onchange  = () => handle(cameraIn);
   if (libraryIn) libraryIn.onchange = () => handle(libraryIn);
+}
+
+/* 2.16: shared bottom-sheet popup. The modal shows one primary
+   "Submit scoresheet" CTA; tapping it opens a sheet with two big
+   options (Take photo / Choose from library) plus Cancel. Replaces
+   the prior inline two-button picker so the modal has ONE obvious
+   action instead of a parallel choice. iOS Action Sheet pattern. */
+function sourceSheetHtml(title) {
+  return `
+    <div class="source-sheet" data-sheet hidden>
+      <div class="source-sheet-card" role="dialog" aria-label="Pick source">
+        <div class="source-sheet-title">${esc(title || 'Submit scoresheet')}</div>
+        <button type="button" class="ul-opt" data-source="camera">
+          <span class="ul-icon">📷</span><span>Take photo</span>
+        </button>
+        <button type="button" class="ul-opt" data-source="library">
+          <span class="ul-icon">🖼️</span><span>Choose from library</span>
+        </button>
+        <button type="button" class="ul-opt cancel" data-sheet-cancel>Cancel</button>
+      </div>
+    </div>`;
+}
+/* Wire the open-button + sheet inside rootEl. Must be called BEFORE
+   wireSourcePicker because both touch the same [data-source] buttons
+   (wireSourcePicker sets .onclick, we use addEventListener to compose). */
+function wireActionSheet(rootEl) {
+  const openBtn = rootEl.querySelector('[data-open-sheet]');
+  const sheet   = rootEl.querySelector('[data-sheet]');
+  if (!openBtn || !sheet) return;
+  const hide = () => { sheet.hidden = true; };
+  openBtn.addEventListener('click', () => { sheet.hidden = false; });
+  // Backdrop click (outside the white card) dismisses.
+  sheet.addEventListener('click', (e) => { if (e.target === sheet) hide(); });
+  rootEl.querySelector('[data-sheet-cancel]').addEventListener('click', hide);
+  // Picking a source closes the sheet (the file picker opens via the
+  // wireSourcePicker onclick handler that fires on the same tap).
+  rootEl.querySelectorAll('[data-source]').forEach(b => b.addEventListener('click', hide));
 }
 
 /* ── PDF → image (lazy PDF.js, page 1 only) ─────────────────────────
@@ -1398,20 +1502,18 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
     <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
     ${modalHeader(match, team)}
     <div class="source-picker" id="czSingle">
-      <button type="button" class="source-btn" data-source="camera">
-        <div class="source-icon">📷</div>
-        <div class="source-label">Take photo</div>
-      </button>
-      <button type="button" class="source-btn" data-source="library">
-        <div class="source-icon">🖼️</div>
-        <div class="source-label">Library</div>
+      <button type="button" class="primary-upload" data-open-sheet>
+        <span class="pu-icon">📷</span>
+        <span>Submit scoresheet</span>
       </button>
       <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
       <input type="file" accept="image/*,application/pdf"                       data-input="library">
+      ${sourceSheetHtml()}
     </div>
     <div id="uploadStatus"></div>`;
   body.querySelector('#modalX').onclick = () => { closeModal(); render(); };
   const root = body.querySelector('#czSingle');
+  wireActionSheet(root);   // 2.16: tap → bottom-sheet → pick source
   let busy = false;
   wireSourcePicker(root, async (file) => {
     if (busy) return; busy = true;
@@ -1479,22 +1581,20 @@ function renderTwoStepUpload(body, modal, match, team, required) {
     return uploaded[s]
       ? `<div class="side-done">✓ ${s.charAt(0).toUpperCase() + s.slice(1)} uploaded</div>`
       : `<div class="source-picker" data-side="${s}">
-           <button type="button" class="source-btn" data-source="camera">
-             <div class="source-icon">📷</div>
-             <div class="source-label">Take photo</div>
-           </button>
-           <button type="button" class="source-btn" data-source="library">
-             <div class="source-icon">🖼️</div>
-             <div class="source-label">Library</div>
+           <button type="button" class="primary-upload" data-open-sheet>
+             <span class="pu-icon">📷</span>
+             <span>Submit ${s} page</span>
            </button>
            <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
            <input type="file" accept="image/*,application/pdf"                       data-input="library">
+           ${sourceSheetHtml(s.charAt(0).toUpperCase() + s.slice(1) + ' page')}
          </div>`;
   }
 
   function attachSide(s) {
     const root = body.querySelector('.source-picker[data-side="' + s + '"]');
     if (!root) return;   // already a checkmark
+    wireActionSheet(root);
     let busy = false;
     wireSourcePicker(root, async (file) => {
       if (busy) return; busy = true;
