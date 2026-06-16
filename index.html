@@ -1438,9 +1438,16 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
       /* 2.4+: uploading a scoresheet means the match was played → clear
          the rescheduled flag if it was set. Non-blocking. */
       await autoClearRescheduleAfterUpload(match, team);
-      closeModal();
+      /* 2.14: keep the modal open for ~1.8s after success showing a
+         green ✓ chip. Captains were unsure whether the upload actually
+         worked when the modal vanished instantly — same visual language
+         as the doubles flow's per-side checkmark. The X close stays
+         enabled so they can dismiss sooner if they want. */
+      body.querySelector('.source-picker').outerHTML =
+        '<div class="side-done">✓ Saved</div>';
+      if (statusEl) statusEl.innerHTML = '';
       toast('Saved');
-      render();
+      setTimeout(() => { closeModal(); render(); }, 1800);
     } catch (e) {
       logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
         side, error_message: (e && e.message || String(e)).slice(0, 250) });
@@ -1468,7 +1475,7 @@ function renderTwoStepUpload(body, modal, match, team, required) {
         closeModal();
         toast('Saved (front + back)');
         render();
-      }, 350);   // brief pause so the second ✓ is visible
+      }, 1800);   // 2.14: longer dwell so captain has time to see ✓
     }
   }
 
