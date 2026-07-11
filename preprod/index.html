@@ -1508,7 +1508,8 @@ function notifyUploadEmail(matchId, teamId) {
     fetch(NOTIFY_MAILER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'papertrail_upload_notify', match_id: matchId, team_id: teamId }),
+      body: JSON.stringify({ action: 'papertrail_upload_notify', match_id: matchId, team_id: teamId,
+        is_preprod: (typeof IS_PREPROD !== 'undefined' && !!IS_PREPROD) }),
       keepalive: true
     }).catch(function () {});
   } catch (e) { /* never interfere with the upload UX */ }
