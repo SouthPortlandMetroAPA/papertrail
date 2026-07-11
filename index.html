@@ -1497,6 +1497,24 @@ function modalHeader(match, team) {
    file picker → upload starts immediately → toast on success. The
    thumbnail is gone (too small to verify on a phone anyway), the Save
    button is gone, the Cancel button is replaced by an X in the corner. */
+/* 2.17: after an upload lands, ping the mailer so the team gets an
+   email copy of the scoresheet. Keyless by design (GAS verifies the
+   photos exist server-side, decides completeness for front/back sets,
+   rate-limits, and derives roster + uploader name itself) — this call
+   carries no content and can never block or fail the upload flow. */
+const NOTIFY_MAILER_URL = 'https://script.google.com/macros/s/AKfycbzGTzkBRTrIIP_tD6sbtOOUmNZkXDdtxPoO4c8fdWt5h3tZFueNSISPv8Q3LWStx73Whw/exec';
+function notifyUploadEmail(matchId, teamId) {
+  try {
+    fetch(NOTIFY_MAILER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'papertrail_upload_notify', match_id: matchId, team_id: teamId,
+        is_preprod: (typeof IS_PREPROD !== 'undefined' && !!IS_PREPROD) }),
+      keepalive: true
+    }).catch(function () {});
+  } catch (e) { /* never interfere with the upload UX */ }
+}
+
 function renderSinglePhotoUpload(body, modal, match, team, side) {
   body.innerHTML = `
     <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
@@ -1537,6 +1555,7 @@ function renderSinglePhotoUpload(body, modal, match, team, side) {
         side, r2_path: path, bytes: meta.bytes });
       logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
         side, r2_path: path });
+      notifyUploadEmail(match.id, team.team_id);
       /* 2.4+: uploading a scoresheet means the match was played → clear
          the rescheduled flag if it was set. Non-blocking. */
       await autoClearRescheduleAfterUpload(match, team);
@@ -1615,6 +1634,7 @@ function renderTwoStepUpload(body, modal, match, team, required) {
           side: s, r2_path: path, bytes: meta.bytes });
         logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
           side: s, r2_path: path });
+        notifyUploadEmail(match.id, team.team_id);
         uploaded[s] = true;
         await autoClearRescheduleAfterUpload(match, team);
         if (statusEl) statusEl.innerHTML = '';
