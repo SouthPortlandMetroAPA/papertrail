@@ -1,0 +1,1799 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ea002a">
+<title>PaperTrail</title>
+<meta name="description" content="Photograph your APA Masters / Doubles scoresheets — South Portland Metro APA">
+<style>
+  :root {
+    --spm-red:   #ea002a;
+    --spm-blue:  #0031a1;
+    --text:      #111827;
+    --text-dim:  #6b7280;
+    --border:    #e5e7eb;
+    --border-strong: #d1d5db;
+    --bg:        #f3f4f6;
+    --bg-card:   #ffffff;
+    --ok:        #16a34a;
+    --warn:      #ca8a04;
+    --bad:       #dc2626;
+    --radius:    14px;
+    --pill:      999px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.5;
+    min-height: 100vh; -webkit-text-size-adjust: 100%;
+    padding-bottom: 32px;
+  }
+
+  /* ── Header ───────────────────────────────────────────────────── */
+  .header {
+    background: linear-gradient(135deg, var(--spm-red) 0%, var(--spm-blue) 100%);
+    color: #fff; padding: 16px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .header-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .header h1 { font-size: 1.15rem; font-weight: 900; margin: 0; letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; }
+  .header h1 .brand-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
+  .header .who { font-size: 0.78rem; opacity: 0.92; text-align: right; }
+  .header .who a { color: #fff; text-decoration: underline; cursor: pointer; opacity: 0.85; }
+  .header .who a:hover { opacity: 1; }
+
+  /* ── Main container ───────────────────────────────────────────── */
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 800; }
+
+  .hint { color: var(--text-dim); font-size: 0.86rem; }
+
+  /* ── Identity form ────────────────────────────────────────────── */
+  .id-card { text-align: center; }
+  .id-card h2 { font-size: 1.2rem; margin-bottom: 6px; }
+  .id-card p { color: var(--text-dim); font-size: 0.92rem; margin: 0 0 14px; }
+  .id-input-row { display: flex; gap: 8px; }
+  .id-input {
+    flex: 1; font: inherit; font-size: 1rem; padding: 12px 14px;
+    border: 1.5px solid var(--border-strong); border-radius: 10px;
+    background: #fff; color: var(--text);
+  }
+  .id-input:focus { outline: none; border-color: var(--spm-blue); }
+  .btn {
+    padding: 11px 18px; border-radius: var(--pill);
+    font-size: 0.92rem; font-weight: 800; border: 0; cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--spm-blue); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #0046cc; }
+  .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+  .btn-outline { background: #fff; border: 1.5px solid var(--border-strong); color: var(--text); }
+  .btn-outline:hover { background: #f9fafb; }
+  .btn-danger { background: var(--bad); color: #fff; }
+  .btn-danger:hover { opacity: 0.92; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── Team buttons ─────────────────────────────────────────────── */
+  .team-buttons { display: grid; gap: 10px; }
+  .team-btn {
+    background: var(--bg-card); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    cursor: pointer; text-align: left;
+    transition: box-shadow 0.16s ease, transform 0.05s;
+    display: flex; align-items: center; gap: 12px;
+    font-family: inherit;
+  }
+  .team-btn:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.06); border-color: var(--border-strong); }
+  .team-btn:active { transform: scale(0.998); }
+  .team-btn .tb-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--spm-red), var(--spm-blue));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.86rem; flex-shrink: 0;
+  }
+  .team-btn .tb-text { flex: 1; min-width: 0; }
+  .team-btn .tb-name { font-size: 1.02rem; font-weight: 800; line-height: 1.25; }
+  .team-btn .tb-meta { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
+  .team-btn .tb-arrow { color: var(--text-dim); font-size: 1.2rem; flex-shrink: 0; }
+
+  /* ── Match grid ───────────────────────────────────────────────── */
+  .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 0.88rem; font-weight: 700; cursor: pointer; text-decoration: none; margin-bottom: 6px; }
+  .back-link:hover { color: var(--text); }
+
+  .match-list { display: flex; flex-direction: column; gap: 6px; }
+  .match-row {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 12px;
+    display: grid; grid-template-columns: 38px 1fr auto; gap: 10px;
+    align-items: center; cursor: pointer;
+    transition: background 0.12s;
+    font-family: inherit; text-align: left;
+    border-left-width: 4px;
+  }
+  .match-row.uploaded    { border-left-color: var(--ok); }
+  .match-row.missing     { border-left-color: var(--bad); }
+  .match-row.rescheduled { border-left-color: #2563eb; }
+  .match-row.playoff,
+  .match-row.no_play,
+  .match-row.bye         { border-left-color: var(--text-dim); cursor: default; opacity: 0.78; }
+  .match-row:hover:not(.playoff):not(.no_play):not(.bye) { background: #f9fafb; }
+  .match-week { font-size: 0.82rem; font-weight: 800; color: var(--spm-blue); }
+  .match-meta { min-width: 0; }
+  .match-line1 { font-size: 0.96rem; font-weight: 700; line-height: 1.3; }
+  .match-line2 { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+  .match-state { font-size: 1.4rem; line-height: 1; padding-right: 4px; flex-shrink: 0; }
+  .match-state.ok      { color: var(--ok); }
+  .match-state.bad     { color: var(--bad); }
+  .match-state.resched { color: #2563eb; font-size: 1.25rem; }
+  .match-state.dim     { color: var(--text-dim); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ── Reschedule section (in modal) ────────────────────────────────
+     Two visual modes:
+       • Banner (already rescheduled): solid blue card at top of modal
+         so the captain immediately sees the current state.
+       • Form (not yet rescheduled): subdued dashed card below the
+         upload area — secondary action, "out of the way" but visible. */
+  .rs-banner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 14px;
+    background: #dbeafe; border-left: 4px solid #2563eb; border-radius: 10px;
+  }
+  .rs-banner-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+  .rs-banner-body { min-width: 0; flex: 1; }
+  .rs-banner-title { font-size: 0.92rem; font-weight: 800; color: #1e40af; }
+  .rs-banner-sub   { font-size: 0.82rem; color: #1e3a8a; margin-top: 2px; }
+  .rs-form {
+    margin-top: 14px; padding: 12px;
+    background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px;
+  }
+  .rs-form-title { font-size: 0.92rem; font-weight: 800; color: #1e40af; margin-bottom: 4px; }
+  .rs-form-hint  { font-size: 0.78rem; color: var(--text-dim); margin-bottom: 10px; line-height: 1.4; }
+  .rs-controls {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .rs-controls input[type="date"] {
+    font: inherit; font-size: 0.9rem; padding: 7px 10px;
+    border: 1px solid var(--border-strong, #d1d5db); border-radius: 8px;
+    background: #fff; flex: 1 1 150px; min-width: 140px;
+  }
+  .rs-status { font-size: 0.78rem; margin-top: 8px; min-height: 1.2em; }
+  .rs-status.err { color: var(--bad); }
+  .rs-status.ok  { color: var(--ok); }
+  /* 2.12: tap-to-expand reschedule (progressive disclosure). 2.13:
+     beefed the toggle's affordance — was a plain blue-text link with
+     no border/background, didn't telegraph "tappable" on mobile. Now a
+     soft-tinted card with a dashed border + rotating chevron. Same
+     visual language as the inner .rs-form so the disclosure feels
+     like the same control just collapsing/expanding. */
+  .rs-collapsed { margin-top: 14px; }
+  .rs-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 12px 14px; min-height: 44px;
+    background: #eff6ff; border: 1px dashed #2563eb; border-radius: 10px;
+    cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 700;
+    color: #1e40af; text-align: left;
+  }
+  .rs-toggle:hover  { background: #dbeafe; }
+  .rs-toggle:active { transform: scale(0.99); }
+  .rs-chev {
+    font-size: 0.85rem; color: #1e40af; opacity: 0.7;
+    transition: transform 0.18s ease;
+    flex-shrink: 0;
+  }
+  .rs-toggle[aria-expanded="true"]              { border-radius: 10px 10px 0 0; border-bottom: none; }
+  .rs-toggle[aria-expanded="true"] .rs-chev     { transform: rotate(180deg); }
+  .rs-collapsed .rs-form { margin-top: 0; border-radius: 0 0 10px 10px; border-top: none; }
+
+  /* ── Upload modal ─────────────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; z-index: 100;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: var(--radius);
+    max-width: 480px; width: 100%; max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    padding: 18px 18px 16px;
+  }
+  .modal h3 { margin: 0 0 6px; font-size: 1.1rem; font-weight: 800; }
+  .modal .sub { color: var(--text-dim); font-size: 0.86rem; margin: 0 0 14px; }
+  /* Upload-modal X close (top-right). Replaces the "Cancel" button row
+     so the upload affordance owns more of the viewport. */
+  .modal { position: relative; }
+  .modal-x {
+    position: absolute; top: 8px; right: 10px;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: transparent; cursor: pointer;
+    font-size: 1.4rem; line-height: 1; color: var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-x:hover { background: #f1f3f7; color: var(--text); }
+  /* Larger source buttons — primary action gets viewport priority on
+     mobile where the previous layout pushed the Save button below the
+     fold. 2.11: removed thumbnail preview + Save button entirely; the
+     upload fires the instant a file is picked. */
+  .source-picker .source-btn { padding: 28px 10px; }
+  /* 2.16: single primary "Submit scoresheet" button. Tap opens a
+     bottom-sheet popup with Camera / Library options (iOS Action Sheet
+     pattern). Replaces the inline two-button picker — one obvious CTA
+     instead of a parallel choice the captain has to evaluate. */
+  .primary-upload {
+    width: 100%; padding: 20px 14px;
+    border: none; border-radius: 12px; cursor: pointer;
+    background: var(--spm-blue, #1d3aa3); color: #fff;
+    font-family: inherit; font-size: 1.05rem; font-weight: 800;
+    letter-spacing: 0.02em;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: filter 0.12s, transform 0.04s;
+  }
+  .primary-upload:hover  { filter: brightness(1.08); }
+  .primary-upload:active { transform: scale(0.99); }
+  .primary-upload .pu-icon { font-size: 1.4rem; line-height: 1; }
+  /* Bottom-sheet action picker. On mobile slides up from the bottom,
+     full-width. On desktop it centers and floats. Backdrop click +
+     cancel button both dismiss. */
+  .source-sheet {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: flex-end; justify-content: center;
+    animation: pcFadeIn 0.16s ease;
+  }
+  .source-sheet[hidden] { display: none !important; }
+  .source-sheet-card {
+    background: #fff;
+    width: 100%; max-width: 540px;
+    border-radius: 16px 16px 0 0;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
+    animation: pcSlideUp 0.22s cubic-bezier(.2,.7,.2,1);
+  }
+  .source-sheet-title {
+    font-size: 0.74rem; font-weight: 800; color: var(--text-dim);
+    text-align: center; padding: 6px 0 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .ul-opt {
+    width: 100%; padding: 16px 14px; margin-bottom: 8px;
+    border: 1px solid var(--border, #e4e9f1); border-radius: 12px;
+    background: #fff; cursor: pointer;
+    font-family: inherit; font-size: 1rem; font-weight: 700;
+    display: flex; align-items: center; gap: 14px;
+    color: var(--text);
+    transition: background-color 0.12s;
+  }
+  .ul-opt:hover  { background: #f6f8fb; }
+  .ul-opt:active { transform: scale(0.99); }
+  .ul-opt .ul-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+  .ul-opt.cancel {
+    background: #f6f8fb; color: var(--text-dim);
+    justify-content: center; margin-top: 4px; margin-bottom: 0;
+    font-weight: 700;
+  }
+  .ul-opt.cancel:hover { background: #eef0f5; }
+  @keyframes pcFadeIn  { from { opacity: 0;                 } to { opacity: 1; } }
+  @keyframes pcSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    .source-sheet, .source-sheet-card { animation: none; }
+  }
+  /* Desktop: float the card in the middle instead of bottom-sheet. */
+  @media (min-width: 600px) {
+    .source-sheet { align-items: center; }
+    .source-sheet-card { border-radius: 14px; max-width: 420px; padding: 14px; }
+  }
+  /* Per-side status block for the doubles two-up layout (front+back).
+     Each side is one row with the take/library buttons OR a green ✓. */
+  .side-block { margin-bottom: 12px; }
+  .side-block:last-child { margin-bottom: 0; }
+  .side-block-label {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.78rem; font-weight: 800; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  .side-done {
+    text-align: center; padding: 18px 10px; border-radius: 12px;
+    background: #f0fdf4; color: var(--ok); font-weight: 700;
+    border: 2px solid #bbf7d0;
+  }
+
+  /* ── Match header (modal, 2.12) — compact text rows ──────────────────
+     Replaces the two big tile cards from 2.4. The captain already knew
+     it was their match against that opponent (they clicked into it);
+     the cards spent ~250px of viewport repeating that. Three text rows
+     now: Week · date, "YOU · HOME/AWAY · MyTeam", "vs · OppTeam · #". */
+  .match-line {
+    display: flex; align-items: center; gap: 8px;
+    margin: 4px 0; font-size: 0.92rem; min-width: 0;
+  }
+  .match-line .m-name {
+    font-weight: 700; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .match-line .m-tno { color: var(--text-dim); font-weight: 600; font-size: 0.84rem; }
+  .match-line.opp .m-name { font-weight: 600; }
+  .me-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
+    background: var(--spm-blue); color: #fff; flex-shrink: 0;
+  }
+  .vs-tag {
+    font-size: 0.74rem; font-weight: 700; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    width: 56px; flex-shrink: 0; padding-left: 4px;
+  }
+
+  .step-pill {
+    display: inline-block; padding: 3px 10px; border-radius: var(--pill);
+    background: #eff6ff; color: var(--spm-blue); font-size: 0.74rem; font-weight: 800;
+    margin-bottom: 8px; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  .capture-zone {
+    border: 2px dashed var(--border-strong); border-radius: 12px;
+    padding: 28px 14px; text-align: center;
+    background: #fafbfc; cursor: pointer;
+    transition: border-color 0.16s, background-color 0.16s;
+    color: var(--text-dim);
+    display: block;
+  }
+  .capture-zone:hover { border-color: var(--spm-blue); background: #eff6ff; color: var(--text); }
+  .capture-zone .cz-icon { font-size: 2rem; margin-bottom: 6px; }
+  .capture-zone .cz-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+  .capture-zone .cz-sub { font-size: 0.78rem; margin-top: 4px; }
+  .capture-zone input[type=file] { display: none; }
+
+  /* ── Source picker (two explicit buttons: Camera + Library) ─────────
+     The PoolPics pattern. Android's <input accept="image/*"> behavior
+     varies wildly across OEMs — some surface Camera in the chooser,
+     others open the file manager directly with no Camera option.
+     Two explicit buttons with separate hidden inputs (one with
+     capture="environment", one without) bypasses the chooser entirely
+     and guarantees Camera or Library based on which button was tapped. */
+  .source-picker {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .source-btn {
+    border: 2px dashed var(--border-strong); border-radius: 12px;
+    padding: 22px 10px; text-align: center;
+    background: #fafbfc; cursor: pointer; color: var(--text-dim);
+    font-family: inherit; font-weight: 700;
+    transition: border-color 0.16s, background-color 0.16s, color 0.16s, transform 0.04s;
+  }
+  .source-btn:hover { border-color: var(--spm-blue); background: #eff6ff; color: var(--text); }
+  .source-btn:active { transform: scale(0.99); }
+  .source-btn .source-icon  { font-size: 1.9rem; line-height: 1; margin-bottom: 4px; }
+  .source-btn .source-label { font-size: 0.92rem; font-weight: 800; color: var(--text); }
+  .source-btn .source-sub   { font-size: 0.72rem; font-weight: 500; color: var(--text-dim); margin-top: 2px; }
+  .source-picker input[type=file] { display: none; }
+
+  .preview-img {
+    width: 100%; max-height: 320px; object-fit: contain;
+    border-radius: 10px; background: #000;
+    margin-top: 10px;
+  }
+
+  .photo-grid { display: grid; gap: 10px; }
+  .photo-grid .ph {
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    background: #fff;
+  }
+  .photo-grid .ph-img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; cursor: zoom-in; background: #000; }
+  .photo-grid .ph-foot { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; }
+  .photo-grid .ph-label { font-size: 0.82rem; font-weight: 700; }
+  .photo-grid .ph-label .side { color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.04em; }
+
+  .status { font-size: 0.86rem; padding: 8px 12px; border-radius: 8px; margin-top: 8px; }
+  .status.progress { background: #eff6ff; color: var(--spm-blue); }
+  .status.error    { background: #fef2f2; color: var(--bad); }
+  .status.ok       { background: #f0fdf4; color: var(--ok); }
+
+  /* ── Lightbox (zoom photo) ─────────────────────────────────────── */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+    display: none; z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 96vw; max-height: 96vh; object-fit: contain; }
+  .lightbox-close {
+    position: absolute; top: 12px; right: 16px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: 0; color: #fff;
+    font-size: 1.6rem; cursor: pointer;
+  }
+
+  /* ── Auto-update overlay ───────────────────────────────────────── */
+  .update-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; z-index: 300;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .update-overlay.open { display: flex; }
+  .uo-card {
+    background: #fff; padding: 22px 26px; border-radius: var(--radius);
+    text-align: center; max-width: 360px;
+  }
+
+  /* ── Toast ─────────────────────────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: #1f2937; color: #fff; padding: 11px 18px;
+    border-radius: var(--pill); font-size: 0.88rem; font-weight: 700;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25); z-index: 250;
+    opacity: 0; pointer-events: none; transition: opacity 0.18s;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── Loading spinner ───────────────────────────────────────────── */
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: -3px; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <h1><span class="brand-dot"></span>PaperTrail</h1>
+    <div class="who" id="whoBlock"></div>
+  </div>
+</header>
+
+<main id="root">
+  <!-- Rendered by JS -->
+</main>
+
+<!-- Upload modal -->
+<div class="modal-backdrop" id="uploadModal" role="dialog" aria-modal="true">
+  <div class="modal" id="uploadModalBody"><!-- rendered by JS --></div>
+</div>
+
+<!-- Delete-confirm modal -->
+<div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true">
+  <div class="modal" id="confirmModalBody"><!-- rendered by JS --></div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close">×</button>
+  <img id="lightboxImg" alt="">
+</div>
+
+<!-- Auto-update overlay -->
+<div class="update-overlay" id="updateOverlay">
+  <div class="uo-card">
+    <h2 style="margin:0 0 8px;font-size:1.05rem;">New version available</h2>
+    <p style="margin:0;">Reloading…</p>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="version.js?_=__TS__"></script>
+<script>
+(function(){
+  const s = document.currentScript.previousElementSibling;
+  if (s && s.src.indexOf('__TS__') !== -1) s.src = s.src.replace('__TS__', Date.now());
+})();
+</script>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   PaperTrail v1.0 — captain-facing scoresheet photo uploader.
+
+   FLOW:
+     1. Captain enters APA# (or email) → resolves to slate.players row.
+     2. Show buttons for every team they're on this session that's
+        Masters / 8-Ball Doubles / 9-Ball Doubles (paper-scored formats).
+     3. Tap team → show match list for the session (week 1 → N).
+     4. Tap match → upload modal (single photo OR atomic 2-step front+back).
+     5. Existing photos → view + delete-with-confirmation.
+
+   STORAGE:
+     • Schedule + teams + players: Supabase (slate schema).
+     • Photo objects: Cloudflare R2 via apa-photos.spmapa.workers.dev.
+     • Photo index:  papertrail.photos (1 row per uploaded image).
+
+   TRUST: no auth. Anyone with any APA# can do anything. localStorage
+   remembers the last entered identity so captains only type it once.
+   ════════════════════════════════════════════════════════════════════════ */
+
+const APP_NAME_BASE = 'PaperTrail';
+const IS_PREPROD    = /\/preprod\//.test(location.pathname);
+const APP_NAME      = IS_PREPROD ? APP_NAME_BASE + '-preprod' : APP_NAME_BASE;
+const SB_URL      = 'https://dqzbekoaysgaiqljueac.supabase.co';
+const SB_ANON     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxemJla29heXNnYWlxbGp1ZWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzA5NzgsImV4cCI6MjA5MDc0Njk3OH0.cCdGxZ4zEFzU_r6lWSDeoNWG67Q4MSYCAtpds035dfU';
+const R2_URL      = 'https://apa-photos.spmapa.workers.dev';
+
+/* Build an R2 image URL with a per-version cache-buster.
+   R2 paths are deterministic on (session, match, team, side) — so a
+   re-upload writes new bytes to the same URL. Without this, HTTP caches
+   (browser + Cloudflare edge) serve the previous image. uploaded_at is
+   set explicitly by recordPhotoInDb on EVERY write (including in-place
+   UPSERTs) so this value always changes when the bytes might have. */
+function r2Url(r2Path, photo) {
+  const ms = photo && photo.uploaded_at
+    ? new Date(photo.uploaded_at).getTime()
+    : Date.now();
+  return R2_URL + '/' + r2Path + '?v=' + ms;
+}
+const SPM_OPERATOR_ID = 1;
+
+const FORMATS_WITH_PHOTOS = {
+  'Masters':         { photos: ['single'], label: 'Masters' },
+  '8-Ball Doubles':  { photos: ['single'], label: '8-Ball Doubles' },
+  '9-Ball Doubles':  { photos: ['front', 'back'], label: '9-Ball Doubles' }
+};
+const PAPERTRAIL_FORMATS = Object.keys(FORMATS_WITH_PHOTOS);
+
+/* Compression: max-2000px, JPEG q=0.80, ~300 KB target */
+const COMPRESS_MAX_DIM = 2000;
+const COMPRESS_QUALITY = 0.80;
+
+/* ── State ─────────────────────────────────────────────────────────── */
+const state = {
+  identity: null,           // { apa_number, name, email } or null
+  session: null,            // { id, name } current session
+  view:    'home',          // 'home' | 'team'
+  teamCtx: null             // selected team object when viewing matches
+};
+
+/* ── Supabase REST helpers ─────────────────────────────────────────── */
+function sbHeaders(schema) {
+  return {
+    apikey: SB_ANON,
+    Authorization: 'Bearer ' + SB_ANON,
+    'Accept-Profile':  schema,
+    'Content-Profile': schema
+  };
+}
+async function sb(method, schema, path, body) {
+  const headers = { ...sbHeaders(schema) };
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    // PostgREST UPSERT: a URL like ?on_conflict=col1,col2 is silently
+    // ignored unless the Prefer header also requests
+    // resolution=merge-duplicates. Without it, the row is INSERTed and
+    // the unique constraint fires (Postgres 23505). v2.4 fix — this
+    // bug had been latent since v1.0 and only showed up when a captain
+    // re-uploaded a side they'd already filed.
+    const prefer = ['return=representation'];
+    if (/[?&]on_conflict=/.test(path)) prefer.push('resolution=merge-duplicates');
+    headers['Prefer'] = prefer.join(',');
+  }
+  const r = await fetch(SB_URL + '/rest/v1/' + path, {
+    method, headers, body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`${method} ${schema}.${path}: ${r.status} ${t.slice(0,200)}`);
+  }
+  if (r.status === 204) return null;
+  const ct = r.headers.get('content-type') || '';
+  return ct.includes('json') ? r.json() : r.text();
+}
+
+/* ── Audit log (fire-and-forget; queried by Claude, not by UI) ────── */
+/* Every meaningful captain action posts a row to papertrail.action_log.
+ * Errors are swallowed; logging NEVER blocks or breaks the user flow.
+ * Multi-step flows (e.g. upload: start → r2 → db → done) are correlated
+ * via a per-page-load session_token.                                  */
+function ptSessionToken() {
+  if (!window.__ptSessionToken) {
+    window.__ptSessionToken = 'pt-' +
+      Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36);
+  }
+  return window.__ptSessionToken;
+}
+function logAction(action, payload) {
+  try {
+    const body = {
+      action,
+      apa_number:    (state.identity && state.identity.apa_number) || null,
+      captain_name:  (state.identity && state.identity.name) || null,
+      app_version:   window.APP_VERSION || null,
+      user_agent:    (navigator.userAgent || '').slice(0, 250),
+      session_token: ptSessionToken(),
+      source:        'papertrail',
+      ...(payload || {})
+    };
+    fetch(SB_URL + '/rest/v1/action_log', {
+      method: 'POST',
+      headers: {
+        apikey: SB_ANON,
+        Authorization: 'Bearer ' + SB_ANON,
+        'Content-Type': 'application/json',
+        'Content-Profile': 'papertrail',
+        'Accept-Profile':  'papertrail',
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify([body])
+    }).catch(() => {});
+  } catch (_) {}
+}
+
+/* ── Identity persistence ──────────────────────────────────────────── */
+function loadIdentity() {
+  try {
+    const raw = localStorage.getItem('papertrail.identity');
+    if (raw) state.identity = JSON.parse(raw);
+  } catch (_) {}
+}
+function saveIdentity(id) {
+  state.identity = id;
+  try { localStorage.setItem('papertrail.identity', JSON.stringify(id)); } catch (_) {}
+  logAction('identity_set', { ok: true });
+}
+function clearIdentity() {
+  logAction('identity_clear', { ok: true });
+  state.identity = null;
+  state.teamCtx = null;
+  state.view = 'home';
+  try { localStorage.removeItem('papertrail.identity'); } catch (_) {}
+}
+
+/* ── Player lookup ─────────────────────────────────────────────────── */
+/* Uses slate.papertrail_lookup_player(input) RPC — narrow column return
+ * (apa_number, name, email) so anon never sees PII (phones, addresses). */
+async function lookupPlayer(input) {
+  const v = input.trim();
+  if (!v) return null;
+  try {
+    const rows = await sb('POST', 'slate', 'rpc/papertrail_lookup_player', { input: v });
+    const p = (rows && rows[0]) || null;
+    logAction('lookup', { ok: !!p, error_message: p ? null : 'not_found',
+      apa_number: p ? p.apa_number : null,
+      captain_name: p ? p.name : null });
+    return p ? { apa_number: p.apa_number, name: p.name, email: p.email } : null;
+  } catch (e) {
+    logAction('lookup', { ok: false, error_message: (e && e.message || String(e)).slice(0, 250) });
+    throw e;
+  }
+}
+
+/* ── Current session ───────────────────────────────────────────────── */
+async function loadCurrentSession() {
+  if (state.session) return state.session;
+  const rows = await sb('GET', 'slate',
+    'sessions?select=id,name&is_current=eq.true&limit=1');
+  if (!rows || rows.length === 0) throw new Error('No current session');
+  state.session = rows[0];
+  return state.session;
+}
+
+/* ── Player → teams (Masters + Doubles only, current SPM session) ── */
+/* Uses slate.papertrail_my_teams(p_apa_number) RPC — already filtered
+ * server-side to current SPM session × Masters/Doubles. Returns at most
+ * one row per team (captain/co-captain dedup is in the function).      */
+async function loadMyTeams(apaNumber) {
+  await loadCurrentSession();
+  try {
+    const rows = await sb('POST', 'slate', 'rpc/papertrail_my_teams',
+      { p_apa_number: apaNumber });
+    const teams = (rows || [])
+      .map(r => ({
+        role:            r.role,
+        team_id:         r.team_id,
+        team_number:     r.team_number,
+        team_name:       r.team_name,
+        division_id:     r.division_id,
+        division_number: r.division_number,
+        division_name:   r.division_name,
+        format:          r.format,
+        night_of_play:   r.night_of_play
+      }))
+      .sort((a, b) => a.division_number.localeCompare(b.division_number));
+    logAction('teams_loaded', { ok: true, bytes: teams.length });
+    return teams;
+  } catch (e) {
+    logAction('teams_loaded', { ok: false, error_message: (e && e.message || String(e)).slice(0, 250) });
+    throw e;
+  }
+}
+
+/* ── Matches + photos for a team ───────────────────────────────────── */
+async function loadTeamMatches(team) {
+  const select = 'id,week_number,match_index,scheduled_date,row_type,' +
+    'home_team_id,away_team_id,label,' +
+    'rescheduled,rescheduled_to,rescheduled_at,' +
+    'home_team:teams!matches_home_team_id_fkey(team_name,team_number),' +
+    'away_team:teams!matches_away_team_id_fkey(team_name,team_number)';
+  const matches = await sb('GET', 'slate',
+    'matches?select=' + select +
+    '&division_id=eq.' + team.division_id +
+    '&order=scheduled_date.asc,week_number.asc,match_index.asc');
+
+  // Filter: only matches involving THIS team, OR division-wide rows (playoff/no_play)
+  const myMatches = (matches || []).filter(m =>
+    m.row_type !== 'regular'
+    || m.home_team_id === team.team_id
+    || m.away_team_id === team.team_id);
+
+  // Per-team scoping: only fetch photos uploaded for THIS captain's team.
+  // Each team owns its own scoresheet; opponent uploads aren't shown.
+  const matchIds = myMatches.filter(m => m.row_type === 'regular').map(m => m.id);
+  let photos = [];
+  if (matchIds.length) {
+    photos = await sb('GET', 'papertrail',
+      'photos?select=id,match_id,side,r2_path,uploaded_at,team_id' +
+      '&team_id=eq.' + team.team_id +
+      '&match_id=in.(' + matchIds.join(',') + ')') || [];
+  }
+  const photosByMatch = new Map();
+  for (const p of photos) {
+    if (!photosByMatch.has(p.match_id)) photosByMatch.set(p.match_id, []);
+    photosByMatch.get(p.match_id).push(p);
+  }
+  return { matches: myMatches, photosByMatch };
+}
+
+/* ── Source picker wiring (Camera + Library buttons) ──────────────────
+ * Pattern: one .source-picker root with two buttons (data-source=
+ * "camera"|"library") and two hidden <input type=file> elements
+ * (data-input="camera" with capture="environment", "library" without).
+ * Clicking a button triggers its matching input. Either input's onchange
+ * fires `onPick(file)`. This bypasses Android's unreliable accept-only
+ * chooser sheet — explicit user intent maps directly to camera or
+ * library on every platform.                                          */
+function wireSourcePicker(rootEl, onPick) {
+  const cameraBtn  = rootEl.querySelector('[data-source="camera"]');
+  const libraryBtn = rootEl.querySelector('[data-source="library"]');
+  const cameraIn   = rootEl.querySelector('[data-input="camera"]');
+  const libraryIn  = rootEl.querySelector('[data-input="library"]');
+  if (cameraBtn && cameraIn)   cameraBtn.onclick  = () => cameraIn.click();
+  if (libraryBtn && libraryIn) libraryBtn.onclick = () => libraryIn.click();
+  const handle = async (input) => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try { await onPick(file); } catch (e) {
+      logAction('upload_error', { ok: false, error_message: (e && e.message || String(e)).slice(0, 250) });
+    } finally {
+      // Reset so picking the same file again still fires onchange.
+      try { input.value = ''; } catch (_) {}
+    }
+  };
+  if (cameraIn)  cameraIn.onchange  = () => handle(cameraIn);
+  if (libraryIn) libraryIn.onchange = () => handle(libraryIn);
+}
+
+/* 2.16: shared bottom-sheet popup. The modal shows one primary
+   "Submit scoresheet" CTA; tapping it opens a sheet with two big
+   options (Take photo / Choose from library) plus Cancel. Replaces
+   the prior inline two-button picker so the modal has ONE obvious
+   action instead of a parallel choice. iOS Action Sheet pattern. */
+function sourceSheetHtml(title) {
+  return `
+    <div class="source-sheet" data-sheet hidden>
+      <div class="source-sheet-card" role="dialog" aria-label="Pick source">
+        <div class="source-sheet-title">${esc(title || 'Submit scoresheet')}</div>
+        <button type="button" class="ul-opt" data-source="camera">
+          <span class="ul-icon">📷</span><span>Take photo</span>
+        </button>
+        <button type="button" class="ul-opt" data-source="library">
+          <span class="ul-icon">🖼️</span><span>Choose from library</span>
+        </button>
+        <button type="button" class="ul-opt cancel" data-sheet-cancel>Cancel</button>
+      </div>
+    </div>`;
+}
+/* Wire the open-button + sheet inside rootEl. Must be called BEFORE
+   wireSourcePicker because both touch the same [data-source] buttons
+   (wireSourcePicker sets .onclick, we use addEventListener to compose). */
+function wireActionSheet(rootEl) {
+  const openBtn = rootEl.querySelector('[data-open-sheet]');
+  const sheet   = rootEl.querySelector('[data-sheet]');
+  if (!openBtn || !sheet) return;
+  const hide = () => { sheet.hidden = true; };
+  openBtn.addEventListener('click', () => { sheet.hidden = false; });
+  // Backdrop click (outside the white card) dismisses.
+  sheet.addEventListener('click', (e) => { if (e.target === sheet) hide(); });
+  rootEl.querySelector('[data-sheet-cancel]').addEventListener('click', hide);
+  // Picking a source closes the sheet (the file picker opens via the
+  // wireSourcePicker onclick handler that fires on the same tap).
+  rootEl.querySelectorAll('[data-source]').forEach(b => b.addEventListener('click', hide));
+}
+
+/* ── PDF → image (lazy PDF.js, page 1 only) ─────────────────────────
+   2.5+: some captains scan with a phone "Scan document" feature or a
+   desktop scanner that outputs PDF instead of an image. We accept PDFs
+   in the same file inputs, render page 1 to canvas at the same
+   resolution target as compressImage (COMPRESS_MAX_DIM long edge), and
+   then go through the existing R2/DB path — net effect is "PDF in,
+   JPEG out" so the photos table only ever holds images. Multi-page
+   PDFs are NOT split: only page 1 is captured. For 9-Ball Doubles
+   (front+back), the captain picks the front-PDF on step 1 and the
+   back-PDF (or photo) on step 2 — same wizard, no special multi-page
+   detection. */
+const PDFJS_VERSION = '4.8.69';
+const PDFJS_URL     = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.min.mjs';
+const PDFJS_WORKER  = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/build/pdf.worker.min.mjs';
+let _pdfJsPromise = null;
+function ensurePdfJs() {
+  if (!_pdfJsPromise) {
+    _pdfJsPromise = import(PDFJS_URL).then(mod => {
+      mod.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      return mod;
+    });
+  }
+  return _pdfJsPromise;
+}
+function isPdfFile(file) {
+  return !!file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || ''));
+}
+async function pdfToImage(file) {
+  const pdfjs = await ensurePdfJs();
+  const buf   = await file.arrayBuffer();
+  const doc   = await pdfjs.getDocument({ data: new Uint8Array(buf), useSystemFonts: true }).promise;
+  if (!doc.numPages) throw new Error('PDF has no pages');
+  const page  = await doc.getPage(1);
+  // Match compressImage's resolution target: scale so longest edge lands
+  // near COMPRESS_MAX_DIM (2000 px), then JPEG-compress at COMPRESS_QUALITY.
+  const natVp = page.getViewport({ scale: 1 });
+  const longest = Math.max(natVp.width, natVp.height);
+  const scale = longest > 0 ? COMPRESS_MAX_DIM / longest : 1;
+  const vp = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.round(vp.width);
+  canvas.height = Math.round(vp.height);
+  // Render against white so transparent regions don't show as black.
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', COMPRESS_QUALITY));
+  return { blob, width: canvas.width, height: canvas.height };
+}
+/* ── HEIC → JPEG (lazy heic2any, libheif WASM) ──────────────────────
+   iPhone Photos save HEIC by default. Browser support as of 2026:
+     Safari (macOS/iOS): ✅ native decode
+     Chrome/Edge/Firefox (desktop+Android): ❌
+     Chrome-on-iOS: ✅ (WebKit)
+   Without conversion, createImageBitmap throws on non-Safari and the
+   upload silently fails with "InvalidStateError". heic2any wraps
+   libheif compiled to WASM and converts in-browser to JPEG.
+
+   Detection: file.type may be 'image/heic' OR 'image/heif' OR (on some
+   iOS uploads via Files picker) the empty string / 'application/octet-
+   stream'. We sniff the first 12 bytes for the HEIC ftyp box brands:
+     ftypheic / ftypheix / ftypmif1 / ftyphevc / ftyphevx / ftypheim
+     ftypheis / ftypmsf1 (HEIF image sequences / multi-image collections).
+   Extension is the second-line fallback for .heic/.heif.
+
+   Output: JPEG quality 0.92. heic2any sometimes returns an array (HEIC
+   sequences = Live Photos). Take the first frame.
+   Bundle is ~1.1MB so we lazy-load it only when an HEIC actually arrives.
+*/
+const HEIC2ANY_URL          = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+const HEIC2ANY_LOAD_TIMEOUT = 30_000;  // 30s — captive portals / Brave shields
+const HEIC_MAX_BYTES        = 30 * 1024 * 1024;  // 30 MB — guard libheif OOM on phones
+let _heic2anyPromise = null;
+function ensureHeic2Any() {
+  if (!_heic2anyPromise) {
+    _heic2anyPromise = new Promise((res, rej) => {
+      if (window.heic2any) return res(window.heic2any);
+      const s = document.createElement('script');
+      s.src = HEIC2ANY_URL;
+      const timer = setTimeout(() => {
+        // onerror doesn't fire for stalled loads (captive portal, blocked CDN);
+        // explicit timeout so we don't hang the UI forever.
+        rej(new Error('HEIC decoder took >30s to load. Check your connection.'));
+      }, HEIC2ANY_LOAD_TIMEOUT);
+      s.onload  = () => { clearTimeout(timer); res(window.heic2any); };
+      s.onerror = () => { clearTimeout(timer); rej(new Error('Could not load heic2any from CDN')); };
+      document.head.appendChild(s);
+    });
+  }
+  return _heic2anyPromise;
+}
+async function sniffIsHeic(file) {
+  // Cheap MIME-based check first.
+  const t = (file.type || '').toLowerCase();
+  if (t === 'image/heic' || t === 'image/heif') return true;
+  if (/\.(heic|heif)$/i.test(file.name || '')) return true;
+  // MIME may be empty / octet-stream on some Android/iOS pickers — sniff.
+  if (file.size < 12) return false;
+  const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  // ASCII bytes 4..11 are the ftyp box's major brand and minor version.
+  // Brand starts at byte 4; we check for any of the HEIC/HEIF/HEVC brands.
+  // (The 'ftyp' string itself is at bytes 4..7; the brand is bytes 8..11.)
+  if (head[4] !== 0x66 || head[5] !== 0x74 ||
+      head[6] !== 0x79 || head[7] !== 0x70) return false;
+  const brand = String.fromCharCode(head[8], head[9], head[10], head[11]).toLowerCase();
+  return brand === 'heic' || brand === 'heix' || brand === 'heim' ||
+         brand === 'heis' || brand === 'mif1' || brand === 'msf1' ||
+         brand === 'hevc' || brand === 'hevx';
+}
+/* Convert an HEIC File → JPEG Blob (q=0.92). On failure throws — caller
+   should surface a friendly error message. */
+async function heicToJpegBlob(file) {
+  const heic2any = await ensureHeic2Any();
+  const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+  // heic2any returns Blob OR Blob[] (for multi-image HEIC sequences / Live Photos).
+  return Array.isArray(out) ? out[0] : out;
+}
+
+/* Unified entry: image → compress; PDF → rasterize page 1; HEIC → try
+   native browser decode first (Safari + Chrome-on-iOS handle it in <1s),
+   fall back to libheif WASM if native decode fails. Output goes through
+   compressImage either way so the existing 2000-px long-edge resize +
+   re-encode at COMPRESS_QUALITY still applies — no surprise size jump
+   from raw camera-resolution iPhone photos.
+   Returns the same {blob, width, height} shape as compressImage so the
+   downstream upload path is unchanged. */
+async function prepareUpload(file) {
+  if (isPdfFile(file)) return pdfToImage(file);
+  if (await sniffIsHeic(file)) {
+    if (file.size > HEIC_MAX_BYTES) {
+      throw new Error('HEIC photo too large (' + Math.round(file.size / 1024 / 1024)
+        + ' MB). Max 30 MB — try a lower-resolution photo.');
+    }
+    // Native HEIC decode path (iOS Safari, Chrome-on-iOS, macOS Safari).
+    // 1-2s instead of 5-8s of WASM decode. createImageBitmap throws on
+    // Chrome/Firefox/Edge desktop & Android — we fall through to heic2any.
+    try {
+      return await compressImage(file);
+    } catch (_native) { /* fall through to libheif fallback */ }
+    let jpegBlob;
+    try {
+      jpegBlob = await heicToJpegBlob(file);
+    } catch (e) {
+      throw new Error('Could not read HEIC photo. Try retaking with iPhone Settings → Camera → Formats → Most Compatible. (' + (e && e.message || e) + ')');
+    }
+    // Wrap as a File so compressImage's downstream code (which reads
+    // .type / .name in some paths) behaves identically to a JPEG upload.
+    const f = new File([jpegBlob],
+      (file.name || 'photo.heic').replace(/\.(heic|heif)$/i, '.jpg'),
+      { type: 'image/jpeg', lastModified: file.lastModified });
+    return compressImage(f);
+  }
+  return compressImage(file);
+}
+
+/* ── Image compression ─────────────────────────────────────────────── */
+async function compressImage(file) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    bitmap = img;
+  }
+  let w = bitmap.width, h = bitmap.height;
+  const dim = Math.max(w, h);
+  if (dim > COMPRESS_MAX_DIM) {
+    const scale = COMPRESS_MAX_DIM / dim;
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  const blob = await new Promise(res =>
+    canvas.toBlob(res, 'image/jpeg', COMPRESS_QUALITY));
+  return { blob, width: w, height: h };
+}
+
+/* ── R2 path + upload ──────────────────────────────────────────────── */
+/* Per-team path so two teams playing the same match each have their
+ * own object — no collisions, no overwrites between teams. Deterministic
+ * within a team so a re-upload by the same captain overwrites cleanly
+ * (no R2 orphans).                                                    */
+function r2PathFor(matchId, teamId, side) {
+  return 'papertrail/' + state.session.id + '/' + matchId + '/' + teamId + '/' + side + '.jpg';
+}
+async function uploadToR2(path, blob) {
+  const r = await fetch(R2_URL + '/' + path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/jpeg', 'X-Session-Token': ptSessionToken() },
+    body: blob
+  });
+  if (!r.ok) throw new Error('R2 upload failed: ' + r.status + ' ' + (await r.text()).slice(0, 200));
+  return r.json();
+}
+async function deleteFromR2(path) {
+  try {
+    await fetch(R2_URL + '/' + path, {
+      method: 'DELETE',
+      headers: { 'X-Session-Token': ptSessionToken() }
+    });
+  } catch (_) {}
+}
+async function recordPhotoInDb(matchId, teamId, side, r2Path, meta) {
+  return sb('POST', 'papertrail',
+    'photos?on_conflict=match_id,team_id,side',
+    [{
+      match_id: matchId, team_id: teamId, side, r2_path: r2Path,
+      uploader_apa_number: state.identity && state.identity.apa_number,
+      uploader_name:       state.identity && state.identity.name,
+      bytes:        meta.bytes,
+      content_type: 'image/jpeg',
+      width:  meta.width,
+      height: meta.height,
+      // Explicit uploaded_at so it changes on EVERY write — needed because
+      // merge-duplicates UPSERTs preserve the row's original uploaded_at
+      // otherwise, which would freeze the r2Url() cache-buster value.
+      uploaded_at: new Date().toISOString()
+    }]);
+}
+async function deletePhotoRow(photoId) {
+  await sb('DELETE', 'papertrail', 'photos?id=eq.' + photoId);
+}
+
+/* ── Render: header ────────────────────────────────────────────────── */
+function renderHeader() {
+  const el = document.getElementById('whoBlock');
+  if (!state.identity) { el.innerHTML = ''; return; }
+  el.innerHTML = esc(state.identity.name) + ' &middot; ' +
+    '<a id="switchBtn">Switch player</a>';
+  document.getElementById('switchBtn').onclick = () => {
+    clearIdentity(); renderHeader(); render();
+  };
+}
+
+/* ── Render: top-level router ──────────────────────────────────────── */
+async function render() {
+  const root = document.getElementById('root');
+  renderHeader();
+  if (!state.identity) {
+    root.innerHTML = renderIdentityForm();
+    wireIdentityForm();
+    return;
+  }
+  if (state.view === 'team' && state.teamCtx) {
+    await renderTeamView(root, state.teamCtx);
+    return;
+  }
+  await renderHome(root);
+}
+
+function renderIdentityForm() {
+  return `
+    <div class="card id-card">
+      <h2>Welcome, Captain</h2>
+      <p>Enter your APA number (full 8-digit form like <code>97225719</code>, OR the 5-digit local form like <code>25719</code>) — or the email APA has on file for you. We'll find your Masters and Doubles teams.</p>
+      <div class="id-input-row">
+        <input id="idInput" class="id-input" type="text" inputmode="text" autocomplete="off"
+          placeholder="APA# (8 or 5 digit) or email" autocapitalize="none" autocorrect="off">
+        <button class="btn btn-primary" id="idGo">Find</button>
+      </div>
+      <div id="idStatus" style="margin-top:10px;"></div>
+    </div>`;
+}
+function wireIdentityForm() {
+  const inp = document.getElementById('idInput');
+  const go  = document.getElementById('idGo');
+  const st  = document.getElementById('idStatus');
+  go.onclick = async () => {
+    const v = inp.value.trim();
+    if (!v) { inp.focus(); return; }
+    go.disabled = true;
+    st.innerHTML = '<div class="status progress"><span class="spinner"></span>Looking up…</div>';
+    try {
+      const player = await lookupPlayer(v);
+      if (!player) {
+        st.innerHTML = '<div class="status error">Couldn’t find that ' +
+          (v.includes('@') ? 'email' : 'APA#') +
+          '. Double-check and try again.</div>';
+        go.disabled = false; return;
+      }
+      saveIdentity(player); render();
+    } catch (e) {
+      st.innerHTML = '<div class="status error">Lookup failed: ' + esc(e.message) + '</div>';
+      go.disabled = false;
+    }
+  };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') go.click(); });
+  inp.focus();
+}
+
+/* ── Render: home (team buttons) ───────────────────────────────────── */
+async function renderHome(root) {
+  root.innerHTML = '<div class="card"><div class="status progress"><span class="spinner"></span>Loading your teams…</div></div>';
+  let teams;
+  try {
+    teams = await loadMyTeams(state.identity.apa_number);
+  } catch (e) {
+    root.innerHTML = '<div class="card"><div class="status error">' + esc(e.message) + '</div></div>';
+    return;
+  }
+  if (teams.length === 0) {
+    root.innerHTML = `
+      <div class="card">
+        <h2>No paper-scored teams this session</h2>
+        <p class="hint">PaperTrail is for Masters and Doubles teams only — all other formats use electronic scoring. If you think this is wrong, double-check the APA# on your card, or contact your league operator.</p>
+      </div>`;
+    return;
+  }
+  const buttons = teams.map(t => {
+    const initials = t.team_name.split(/\s+/).slice(0,2)
+      .map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+    const fmt = FORMATS_WITH_PHOTOS[t.format].label;
+    const night = t.night_of_play ? (' &middot; ' + esc(t.night_of_play)) : '';
+    return `<button class="team-btn" data-team-id="${t.team_id}">
+      <div class="tb-icon">${esc(initials)}</div>
+      <div class="tb-text">
+        <div class="tb-name">${esc(t.team_name)}</div>
+        <div class="tb-meta">${esc(t.division_number)} &middot; ${esc(t.division_name)} &middot; ${esc(fmt)}${night}</div>
+      </div>
+      <div class="tb-arrow">›</div>
+    </button>`;
+  }).join('');
+  root.innerHTML = `
+    <div class="card">
+      <h2>Your paper-scored teams &mdash; ${esc(state.session.name)}</h2>
+      <div class="team-buttons" style="margin-top:12px;">${buttons}</div>
+    </div>`;
+  root.querySelectorAll('.team-btn').forEach(btn => {
+    btn.onclick = () => {
+      const id = parseInt(btn.dataset.teamId, 10);
+      const t = teams.find(x => x.team_id === id);
+      if (t) {
+        logAction('view_team', { ok: true, team_id: t.team_id });
+        state.view = 'team'; state.teamCtx = t; render();
+      }
+    };
+  });
+}
+
+/* ── Render: team view (match list) ────────────────────────────────── */
+async function renderTeamView(root, team) {
+  root.innerHTML = `
+    <a class="back-link" id="backHome">‹ Back to teams</a>
+    <div class="card">
+      <h2>${esc(team.team_name)}</h2>
+      <p class="hint">${esc(team.division_number)} &middot; ${esc(team.division_name)} &middot; ${esc(FORMATS_WITH_PHOTOS[team.format].label)}${team.night_of_play ? ' &middot; ' + esc(team.night_of_play) : ''}</p>
+      <div id="matchListContainer" style="margin-top:12px;">
+        <div class="status progress"><span class="spinner"></span>Loading matches…</div>
+      </div>
+    </div>`;
+  document.getElementById('backHome').onclick = () => {
+    state.view = 'home'; state.teamCtx = null; render();
+  };
+
+  let data;
+  try {
+    data = await loadTeamMatches(team);
+  } catch (e) {
+    document.getElementById('matchListContainer').innerHTML =
+      '<div class="status error">' + esc(e.message) + '</div>';
+    return;
+  }
+  const { matches, photosByMatch } = data;
+  const required = FORMATS_WITH_PHOTOS[team.format].photos;
+  const rowsHtml = matches.map(m => renderMatchRow(m, team, required, photosByMatch.get(m.id) || [])).join('');
+  document.getElementById('matchListContainer').innerHTML =
+    rowsHtml ? `<div class="match-list">${rowsHtml}</div>` :
+               '<div class="hint">No matches found for this team.</div>';
+  logAction('matches_loaded', { ok: true, team_id: team.team_id, bytes: matches.length });
+  document.querySelectorAll('.match-row').forEach(row => {
+    if (row.classList.contains('playoff') || row.classList.contains('no_play')
+        || row.classList.contains('bye')) return;
+    row.onclick = () => {
+      const matchId = parseInt(row.dataset.matchId, 10);
+      const m = matches.find(x => x.id === matchId);
+      const photos = (photosByMatch.get(matchId) || []).slice();
+      logAction('open_match', { ok: true, team_id: team.team_id, match_id: matchId });
+      openMatchModal(m, team, required, photos);
+    };
+  });
+}
+
+function renderMatchRow(m, team, required, photos) {
+  const wk = m.week_number != null ? 'W' + m.week_number : '—';
+  const dt = fmtShortDate(m.scheduled_date);
+
+  if (m.row_type === 'playoff') {
+    return `<div class="match-row playoff">
+      <div class="match-week">${esc(wk)}</div>
+      <div class="match-meta">
+        <div class="match-line1">Playoff Week</div>
+        <div class="match-line2">${esc(dt)}</div>
+      </div>
+      <div class="match-state dim">Playoff</div>
+    </div>`;
+  }
+  if (m.row_type === 'no_play') {
+    return `<div class="match-row no_play">
+      <div class="match-week">&mdash;</div>
+      <div class="match-meta">
+        <div class="match-line1">${esc(m.label || 'No Play')}</div>
+        <div class="match-line2">${esc(dt)}</div>
+      </div>
+      <div class="match-state dim">No Play</div>
+    </div>`;
+  }
+
+  const meHome = m.home_team_id === team.team_id;
+  const opp    = meHome ? m.away_team : m.home_team;
+  const homeAway = meHome ? 'HOME' : 'AWAY';
+  if (!opp) {
+    return `<div class="match-row bye">
+      <div class="match-week">${esc(wk)}</div>
+      <div class="match-meta">
+        <div class="match-line1">BYE</div>
+        <div class="match-line2">${esc(dt)} &middot; opponent unfilled</div>
+      </div>
+      <div class="match-state dim">Bye</div>
+    </div>`;
+  }
+  const haveSides = new Set(photos.map(p => p.side));
+  const allHave = required.every(s => haveSides.has(s));
+  // State precedence (matches Slate admin 3.46+):
+  //   ✓ uploaded (photos win — even if rescheduled)
+  //   📅 rescheduled (no photos AND match.rescheduled=true)
+  //   ✗ missing (no photos, not rescheduled)
+  let cls, stateIcon, line2 = `${esc(dt)} · ${esc(homeAway)} · ${esc(opp.team_number)}`;
+  if (allHave) {
+    cls = 'uploaded';
+    stateIcon = '<div class="match-state ok">✓</div>';
+  } else if (m.rescheduled) {
+    cls = 'rescheduled';
+    stateIcon = '<div class="match-state resched">📅</div>';
+    const newDate = m.rescheduled_to ? fmtShortDate(m.rescheduled_to) : 'no date yet';
+    line2 = `${esc(dt)} · ${esc(homeAway)} · Rescheduled → ${esc(newDate)}`;
+  } else {
+    cls = 'missing';
+    stateIcon = '<div class="match-state bad">✗</div>';
+  }
+  return `<div class="match-row ${cls}" data-match-id="${m.id}">
+    <div class="match-week">${esc(wk)}</div>
+    <div class="match-meta">
+      <div class="match-line1">${meHome ? 'vs ' : '@ '}${esc(opp.team_name)}</div>
+      <div class="match-line2">${line2}</div>
+    </div>
+    ${stateIcon}
+  </div>`;
+}
+
+/* ── Upload modal: open dispatcher ─────────────────────────────────── */
+function openMatchModal(match, team, required, existingPhotos) {
+  const modal = document.getElementById('uploadModal');
+  const body  = document.getElementById('uploadModalBody');
+  modal.classList.add('open');
+  const have = new Set(existingPhotos.map(p => p.side));
+  const haveAll = required.every(s => have.has(s));
+  if (haveAll && existingPhotos.length > 0) {
+    renderReviewMode(body, modal, match, team, existingPhotos);
+  } else if (required.length === 1) {
+    renderSinglePhotoUpload(body, modal, match, team, required[0]);
+  } else {
+    renderTwoStepUpload(body, modal, match, team, required);
+  }
+  // Reschedule UI is bolted on AFTER the dispatch so the upload-mode
+  // functions don't need to know about it. In the two-step flow it gets
+  // clobbered on step 2 (innerHTML overwrite) — acceptable since by step 2
+  // the captain has already committed to uploading. The decorator prepends
+  // a banner when already rescheduled and appends the form either way.
+  decorateModalForReschedule(body, match, team);
+}
+
+/* ── Reschedule decorator (PaperTrail 2.3+) ─────────────────────────────
+   Two visual modes:
+     1. Already rescheduled  → prominent blue banner at top of modal
+                               + edit/clear controls at bottom.
+     2. Not yet rescheduled → subdued dashed form at bottom of modal
+                              ("Match was rescheduled? Mark it here").
+   Skip non-regular rows (playoff / no_play / BYE) — nothing to reschedule. */
+function decorateModalForReschedule(body, match, team) {
+  if (match.row_type !== 'regular') return;
+  if (!match.home_team_id || !match.away_team_id) return;
+
+  if (match.rescheduled) {
+    const dateLabel = match.rescheduled_to
+      ? fmtShortDate(match.rescheduled_to)
+      : 'No new date set yet';
+    const banner = document.createElement('div');
+    banner.className = 'rs-banner';
+    banner.innerHTML = `
+      <div class="rs-banner-icon">📅</div>
+      <div class="rs-banner-body">
+        <div class="rs-banner-title">Match rescheduled</div>
+        <div class="rs-banner-sub">${esc(dateLabel)}</div>
+      </div>`;
+    body.insertBefore(banner, body.firstChild);
+
+    const controls = document.createElement('div');
+    controls.className = 'rs-form';
+    controls.innerHTML = `
+      <div class="rs-form-title">Update reschedule</div>
+      <div class="rs-form-hint">Change the new date, or clear the reschedule to mark this match as needing photos again.</div>
+      <div class="rs-controls">
+        <input type="date" id="rsDateInput" value="${esc(match.rescheduled_to || '')}" />
+        <button type="button" class="btn btn-primary" id="rsUpdateBtn">Update date</button>
+        <button type="button" class="btn btn-outline" id="rsClearBtn">Clear</button>
+      </div>
+      <div id="rsStatus" class="rs-status"></div>`;
+    body.appendChild(controls);
+
+    controls.querySelector('#rsUpdateBtn').onclick = () =>
+      doMarkRescheduled(match.id, team,
+        controls.querySelector('#rsDateInput').value || null);
+    controls.querySelector('#rsClearBtn').onclick = () =>
+      doClearReschedule(match.id, team);
+    return;
+  }
+
+  // Not yet rescheduled — append a collapsed link. 2.12: reschedule is
+  // an edge case (<5% of matches); the full form ate ~250px of viewport
+  // and visually competed with the upload buttons. Now hidden behind a
+  // single tap. Progressive disclosure per 2026 mobile-first patterns.
+  const wrap = document.createElement('div');
+  wrap.className = 'rs-collapsed';
+  wrap.innerHTML = `
+    <button type="button" class="rs-toggle" id="rsToggle" aria-expanded="false">
+      <span>📅 Match was rescheduled?</span>
+      <span class="rs-chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="rs-form" id="rsForm" style="display:none;">
+      <div class="rs-controls">
+        <input type="date" id="rsDateInput" />
+        <button type="button" class="btn btn-primary" id="rsSaveBtn">Set new date</button>
+        <button type="button" class="btn btn-outline" id="rsNoDateBtn">Date TBD</button>
+      </div>
+      <div id="rsStatus" class="rs-status"></div>
+    </div>`;
+  body.appendChild(wrap);
+
+  wrap.querySelector('#rsToggle').onclick = () => {
+    const f = wrap.querySelector('#rsForm');
+    const open = f.style.display !== 'none';
+    f.style.display = open ? 'none' : 'block';
+    wrap.querySelector('#rsToggle').setAttribute('aria-expanded', String(!open));
+  };
+  wrap.querySelector('#rsSaveBtn').onclick = () =>
+    doMarkRescheduled(match.id, team,
+      wrap.querySelector('#rsDateInput').value || null);
+  wrap.querySelector('#rsNoDateBtn').onclick = () =>
+    doMarkRescheduled(match.id, team, null);
+}
+
+/* ── Reschedule RPC callers ─────────────────────────────────────────────
+   Anon writes to slate.matches are blocked by RLS. The two SECURITY DEFINER
+   RPCs (slate.papertrail_mark_rescheduled / _clear_reschedule) gate on
+   slate.team_memberships — the calling APA number must be on one of the
+   two teams in the match. */
+async function doMarkRescheduled(matchId, team, dateStr) {
+  const status = document.getElementById('rsStatus');
+  const setStatus = (txt, cls) => {
+    if (!status) return;
+    status.textContent = txt;
+    status.className = 'rs-status' + (cls ? ' ' + cls : '');
+  };
+  setStatus('Saving…', '');
+  logAction('reschedule_start', { ok: true, team_id: team.team_id,
+    match_id: matchId, rescheduled_to: dateStr });
+  try {
+    await sb('POST', 'slate', 'rpc/papertrail_mark_rescheduled', {
+      p_match_id:   matchId,
+      p_apa_number: state.identity.apa_number,
+      p_date:       dateStr
+    });
+    logAction('reschedule_done', { ok: true, team_id: team.team_id,
+      match_id: matchId, rescheduled_to: dateStr });
+    closeModal();
+    toast(dateStr ? 'Marked rescheduled' : 'Marked rescheduled (no date)');
+    render();
+  } catch (e) {
+    logAction('reschedule_error', { ok: false, team_id: team.team_id,
+      match_id: matchId,
+      error_message: (e && e.message || String(e)).slice(0, 250) });
+    setStatus(e.message, 'err');
+  }
+}
+/* PaperTrail 2.4+: silently clear the rescheduled flag after a captain
+   successfully uploads a scoresheet. Uploading proves the match
+   happened, so the "needs to be rescheduled" state is no longer
+   accurate. Differs from doClearReschedule() in three ways:
+     1. Fire-and-forget — does NOT block / re-throw on failure. The
+        upload already succeeded; a stale reschedule flag is annoying
+        but not blocking, and admin can clear it manually.
+     2. No toast / no closeModal / no extra render — the calling
+        upload flow already handles those.
+     3. Skips the RPC entirely if the match wasn't rescheduled to
+        begin with — most uploads.
+   The reschedule RPC gates on team membership (slate.team_memberships),
+   so this only works for captains/co-captains/players on the team. */
+async function autoClearRescheduleAfterUpload(match, team) {
+  if (!match || !match.rescheduled) return;
+  if (!state.identity || !state.identity.apa_number) return;
+  logAction('reschedule_auto_clear_start', { ok: true,
+    team_id: team.team_id, match_id: match.id });
+  try {
+    await sb('POST', 'slate', 'rpc/papertrail_clear_reschedule', {
+      p_match_id:   match.id,
+      p_apa_number: state.identity.apa_number
+    });
+    logAction('reschedule_auto_clear_done', { ok: true,
+      team_id: team.team_id, match_id: match.id });
+  } catch (e) {
+    /* Non-blocking: log + swallow. The upload itself succeeded.
+       If this captain isn't a team member (shouldn't happen — they
+       just uploaded), or the RPC errored, leave the flag alone and
+       let admin clean up. */
+    logAction('reschedule_auto_clear_error', { ok: false,
+      team_id: team.team_id, match_id: match.id,
+      error_message: (e && e.message || String(e)).slice(0, 250) });
+  }
+}
+
+async function doClearReschedule(matchId, team) {
+  const status = document.getElementById('rsStatus');
+  const setStatus = (txt, cls) => {
+    if (!status) return;
+    status.textContent = txt;
+    status.className = 'rs-status' + (cls ? ' ' + cls : '');
+  };
+  setStatus('Clearing…', '');
+  logAction('reschedule_clear_start', { ok: true, team_id: team.team_id, match_id: matchId });
+  try {
+    await sb('POST', 'slate', 'rpc/papertrail_clear_reschedule', {
+      p_match_id:   matchId,
+      p_apa_number: state.identity.apa_number
+    });
+    logAction('reschedule_clear_done', { ok: true, team_id: team.team_id, match_id: matchId });
+    closeModal();
+    toast('Reschedule cleared');
+    render();
+  } catch (e) {
+    logAction('reschedule_clear_error', { ok: false, team_id: team.team_id, match_id: matchId,
+      error_message: (e && e.message || String(e)).slice(0, 250) });
+    setStatus(e.message, 'err');
+  }
+}
+function closeModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+  document.getElementById('uploadModalBody').innerHTML = '';
+}
+function modalHeader(match, team) {
+  /* 2.12: compact text rows instead of two tile cards. The cards from 2.4
+     ate ~40% of the modal viewport for info the captain already knew
+     (they had to click into THIS match to be here). Same info, ~80px
+     instead of ~250px:
+
+       Week 5 · Sat 6/14/2026
+       You (AWAY) · Three Blind Mice
+       vs. #9204 Receding Hairlines
+
+     "You (AWAY)" puts the captain's team first regardless of home/away
+     so they don't have to read both labels to find themselves. */
+  const meIsHome = match.home_team_id === team.team_id;
+  const homeT = match.home_team || {};
+  const awayT = match.away_team || {};
+  const myT   = meIsHome ? homeT : awayT;
+  const oppT  = meIsHome ? awayT : homeT;
+  const dateLabel = esc(fmtShortDate(match.scheduled_date));
+  const wk = (match.week_number != null) ? ('Week ' + match.week_number + ' · ') : '';
+  return `<h3>${wk}${dateLabel}</h3>
+    <div class="match-line"><span class="me-pill">YOU · ${meIsHome ? 'HOME' : 'AWAY'}</span>
+      <span class="m-name">${esc(myT.team_name || '—')}</span></div>
+    <div class="match-line opp"><span class="vs-tag">vs</span>
+      <span class="m-name">${esc(oppT.team_name || '—')}</span>
+      <span class="m-tno">#${esc(oppT.team_number || '?')}</span></div>`;
+}
+
+/* Auto-upload-on-pick flow (2.11). The previous design required the
+   user to (a) pick a file, (b) verify a small thumbnail, (c) tap Save.
+   Captains were closing the modal at step (b) thinking it was done, and
+   the Save button often sat below the fold on mobile because the
+   thumbnail bloated the modal height. New flow: tap a source button →
+   file picker → upload starts immediately → toast on success. The
+   thumbnail is gone (too small to verify on a phone anyway), the Save
+   button is gone, the Cancel button is replaced by an X in the corner. */
+/* 2.17: after an upload lands, ping the mailer so the team gets an
+   email copy of the scoresheet. Keyless by design (GAS verifies the
+   photos exist server-side, decides completeness for front/back sets,
+   rate-limits, and derives roster + uploader name itself) — this call
+   carries no content and can never block or fail the upload flow. */
+const NOTIFY_MAILER_URL = 'https://script.google.com/macros/s/AKfycbzGTzkBRTrIIP_tD6sbtOOUmNZkXDdtxPoO4c8fdWt5h3tZFueNSISPv8Q3LWStx73Whw/exec';
+function notifyUploadEmail(matchId, teamId) {
+  try {
+    fetch(NOTIFY_MAILER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'papertrail_upload_notify', match_id: matchId, team_id: teamId }),
+      keepalive: true
+    }).catch(function () {});
+  } catch (e) { /* never interfere with the upload UX */ }
+}
+
+function renderSinglePhotoUpload(body, modal, match, team, side) {
+  body.innerHTML = `
+    <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
+    ${modalHeader(match, team)}
+    <div class="source-picker" id="czSingle">
+      <button type="button" class="primary-upload" data-open-sheet>
+        <span class="pu-icon">📷</span>
+        <span>Submit scoresheet</span>
+      </button>
+      <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
+      <input type="file" accept="image/*,application/pdf"                       data-input="library">
+      ${sourceSheetHtml()}
+    </div>
+    <div id="uploadStatus"></div>`;
+  body.querySelector('#modalX').onclick = () => { closeModal(); render(); };
+  const root = body.querySelector('#czSingle');
+  wireActionSheet(root);   // 2.16: tap → bottom-sheet → pick source
+  let busy = false;
+  wireSourcePicker(root, async (file) => {
+    if (busy) return; busy = true;
+    const statusEl = body.querySelector('#uploadStatus');
+    const willConvert = await sniffIsHeic(file);
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
+        + (willConvert ? 'Converting HEIC photo…' : 'Processing photo…') + '</div>';
+    }
+    logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id, side });
+    try {
+      const { blob, width, height } = await prepareUpload(file);
+      const meta = { width, height, bytes: blob.size };
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>Uploading…</div>';
+      }
+      const path = r2PathFor(match.id, team.team_id, side);
+      await uploadToR2(path, blob);
+      await recordPhotoInDb(match.id, team.team_id, side, path, meta);
+      logAction('upload_db', { ok: true, team_id: team.team_id, match_id: match.id,
+        side, r2_path: path, bytes: meta.bytes });
+      logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
+        side, r2_path: path });
+      notifyUploadEmail(match.id, team.team_id);
+      /* 2.4+: uploading a scoresheet means the match was played → clear
+         the rescheduled flag if it was set. Non-blocking. */
+      await autoClearRescheduleAfterUpload(match, team);
+      /* 2.15: no auto-close. Modal stays open with a ✓ Saved chip until
+         the captain taps ✕. (Auto-close was confusing — they couldn't
+         tell whether their tap had triggered the dismiss or whether the
+         upload had something to do with it.) The ✕ handler runs
+         render() so the match list reflects the upload on close. */
+      body.querySelector('.source-picker').outerHTML =
+        '<div class="side-done">✓ Saved · tap ✕ to close</div>';
+      if (statusEl) statusEl.innerHTML = '';
+      toast('Saved');
+    } catch (e) {
+      logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
+        side, error_message: (e && e.message || String(e)).slice(0, 250) });
+      if (statusEl) statusEl.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+      busy = false;   // let the user retry
+    }
+  });
+}
+
+/* ── 9-Ball doubles upload (front + back) ──────────────────────────────
+   2.11: dropped the atomic "save both at once" wizard. Each side now
+   uploads independently the instant a file is picked, with a green ✓
+   replacing the buttons when done. Once both sides are checkmarks, the
+   modal auto-closes with a toast. Captains who upload only one side and
+   close the modal get the partial state saved — the match row will show
+   "1 of 2 uploaded" and they can come back to finish the other side.
+   This eliminates the prior Next / Save Both button chain (3-4 taps)
+   and the thumbnail previews that pushed buttons below the fold. */
+function renderTwoStepUpload(body, modal, match, team, required) {
+  const uploaded = {};   // 'front' | 'back' → true once stored
+
+  function maybeAutoClose() {
+    /* 2.15: no auto-close. Captain dismisses with ✕ when ready.
+       toast() still fires once both sides are done so they get
+       passive acknowledgement without losing the modal. */
+    if (required.every(s => uploaded[s])) toast('Saved (front + back)');
+  }
+
+  function renderSide(s) {
+    return uploaded[s]
+      ? `<div class="side-done">✓ ${s.charAt(0).toUpperCase() + s.slice(1)} uploaded</div>`
+      : `<div class="source-picker" data-side="${s}">
+           <button type="button" class="primary-upload" data-open-sheet>
+             <span class="pu-icon">📷</span>
+             <span>Submit ${s} page</span>
+           </button>
+           <input type="file" accept="image/*,application/pdf" capture="environment" data-input="camera">
+           <input type="file" accept="image/*,application/pdf"                       data-input="library">
+           ${sourceSheetHtml(s.charAt(0).toUpperCase() + s.slice(1) + ' page')}
+         </div>`;
+  }
+
+  function attachSide(s) {
+    const root = body.querySelector('.source-picker[data-side="' + s + '"]');
+    if (!root) return;   // already a checkmark
+    wireActionSheet(root);
+    let busy = false;
+    wireSourcePicker(root, async (file) => {
+      if (busy) return; busy = true;
+      const statusEl = body.querySelector('#uploadStatus');
+      const willConvert = await sniffIsHeic(file);
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="status progress"><span class="spinner"></span>'
+          + (willConvert ? 'Converting HEIC photo…' : 'Uploading ' + s + '…') + '</div>';
+      }
+      logAction('upload_start', { ok: true, team_id: team.team_id, match_id: match.id, side: s });
+      try {
+        const { blob, width, height } = await prepareUpload(file);
+        const meta = { width, height, bytes: blob.size };
+        const path = r2PathFor(match.id, team.team_id, s);
+        await uploadToR2(path, blob);
+        await recordPhotoInDb(match.id, team.team_id, s, path, meta);
+        logAction('upload_db', { ok: true, team_id: team.team_id, match_id: match.id,
+          side: s, r2_path: path, bytes: meta.bytes });
+        logAction('upload_done', { ok: true, team_id: team.team_id, match_id: match.id,
+          side: s, r2_path: path });
+        notifyUploadEmail(match.id, team.team_id);
+        uploaded[s] = true;
+        await autoClearRescheduleAfterUpload(match, team);
+        if (statusEl) statusEl.innerHTML = '';
+        renderAll();        // swap this side's buttons for ✓
+        maybeAutoClose();
+      } catch (e) {
+        logAction('upload_error', { ok: false, team_id: team.team_id, match_id: match.id,
+          side: s, error_message: (e && e.message || String(e)).slice(0, 250) });
+        if (statusEl) statusEl.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+        busy = false;
+      }
+    });
+  }
+
+  function renderAll() {
+    body.innerHTML = `
+      <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
+      ${modalHeader(match, team)}
+      ${required.map(s => `
+        <div class="side-block">
+          <div class="side-block-label">${s.charAt(0).toUpperCase() + s.slice(1)} page</div>
+          ${renderSide(s)}
+        </div>`).join('')}
+      <div id="uploadStatus"></div>`;
+    body.querySelector('#modalX').onclick = () => { closeModal(); render(); };
+    required.forEach(s => attachSide(s));
+  }
+  renderAll();
+}
+
+/* ── Review mode: existing photos, view + delete ───────────────────── */
+function renderReviewMode(body, modal, match, team, existingPhotos) {
+  const photosHtml = existingPhotos.map(p => `
+    <div class="ph">
+      <img class="ph-img" src="${esc(r2Url(p.r2_path, p))}" alt=""
+           data-photo-url="${esc(r2Url(p.r2_path, p))}">
+      <div class="ph-foot">
+        <div class="ph-label">${esc(p.side === 'single' ? 'Scoresheet' : p.side)}
+          <span class="side"> &middot; ${esc(fmtTimeAgo(p.uploaded_at))}</span></div>
+        <button class="btn btn-outline" data-del-id="${p.id}" data-del-path="${esc(p.r2_path)}">Delete</button>
+      </div>
+    </div>`).join('');
+  body.innerHTML = `
+    <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
+    ${modalHeader(match, team)}
+    <div class="photo-grid" style="margin-top:8px;">${photosHtml}</div>`;
+  body.querySelector('#modalX').onclick = () => closeModal();
+  body.querySelectorAll('.ph-img').forEach(img => {
+    img.onclick = () => openLightbox(img.dataset.photoUrl);
+  });
+  body.querySelectorAll('[data-del-id]').forEach(b => {
+    b.onclick = () => askDelete(parseInt(b.dataset.delId, 10), b.dataset.delPath);
+  });
+}
+
+/* ── Custom delete-confirmation modal ──────────────────────────────── */
+function askDelete(photoId, r2Path) {
+  const cm = document.getElementById('confirmModal');
+  const cb = document.getElementById('confirmModalBody');
+  cm.classList.add('open');
+  cb.innerHTML = `
+    <h3>Delete this scoresheet photo?</h3>
+    <p class="sub">This removes it from PaperTrail and the league archive. You can re-upload later if needed, but this specific image is gone.</p>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-outline" id="cancelDel">Keep it</button>
+      <button class="btn btn-danger" id="confirmDel" style="margin-left:auto;">Delete</button>
+    </div>
+    <div id="delStatus"></div>`;
+  cb.querySelector('#cancelDel').onclick = () => cm.classList.remove('open');
+  cb.querySelector('#confirmDel').onclick = async () => {
+    cb.querySelector('#confirmDel').disabled = true;
+    cb.querySelector('#delStatus').innerHTML =
+      '<div class="status progress"><span class="spinner"></span>Deleting…</div>';
+    logAction('delete_start', { ok: true, r2_path: r2Path });
+    try {
+      await deletePhotoRow(photoId);
+      logAction('delete_db', { ok: true, r2_path: r2Path });
+      await deleteFromR2(r2Path);
+      logAction('delete_done', { ok: true, r2_path: r2Path });
+      cm.classList.remove('open');
+      closeModal();
+      toast('Deleted');
+      render();
+    } catch (e) {
+      logAction('delete_error', { ok: false, r2_path: r2Path,
+        error_message: (e && e.message || String(e)).slice(0, 250) });
+      cb.querySelector('#delStatus').innerHTML =
+        '<div class="status error">' + esc(e.message) + '</div>';
+      cb.querySelector('#confirmDel').disabled = false;
+    }
+  };
+}
+
+/* ── Lightbox ──────────────────────────────────────────────────────── */
+function openLightbox(url) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = url;
+  lb.classList.add('open');
+}
+document.getElementById('lightboxClose').onclick = () =>
+  document.getElementById('lightbox').classList.remove('open');
+document.getElementById('lightbox').onclick = (e) => {
+  if (e.target.id === 'lightbox') e.currentTarget.classList.remove('open');
+};
+
+/* ── Toast ─────────────────────────────────────────────────────────── */
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ── Helpers ───────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function fmtShortDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${m}/${d}/${y}`;
+}
+function fmtTimeAgo(iso) {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (sec < 60)        return 'just now';
+  if (sec < 3600)      return Math.floor(sec / 60) + 'm ago';
+  if (sec < 86400)     return Math.floor(sec / 3600) + 'h ago';
+  if (sec < 86400 * 7) return Math.floor(sec / 86400) + 'd ago';
+  return new Date(iso).toLocaleDateString();
+}
+
+/* ── Auto-update version-poll (standard pattern) ──────────────────── */
+async function checkVersion() {
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/apps?app_name=eq.' + encodeURIComponent(APP_NAME) +
+      '&select=version',
+      { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON,
+                   'Accept-Profile': 'apa_core' } });
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (!rows || !rows[0]) return;
+    if (rows[0].version !== window.APP_VERSION) {
+      document.getElementById('updateOverlay').classList.add('open');
+      setTimeout(() => location.reload(true), 800);
+    }
+  } catch (_) {}
+}
+
+/* ── Bootstrap ─────────────────────────────────────────────────────── */
+loadIdentity();
+logAction('init', { ok: true });
+render();
+setInterval(checkVersion, 30000);
+
+</script>
+
+</body>
+</html>
