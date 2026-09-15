@@ -731,7 +731,7 @@ async function loadTeamMatches(team) {
   let photos = [];
   if (matchIds.length) {
     photos = await sb('GET', 'papertrail',
-      'photos?select=id,match_id,side,r2_path,uploaded_at,team_id' +
+      'photos?select=id,match_id,side,r2_path,uploaded_at,team_id,uploader_apa_number,uploader_name' +
       '&team_id=eq.' + team.team_id +
       '&match_id=in.(' + matchIds.join(',') + ')') || [];
   }
@@ -1016,13 +1016,15 @@ async function deleteFromR2(path) {
     });
   } catch (_) {}
 }
-async function recordPhotoInDb(matchId, teamId, side, r2Path, meta) {
+async function recordPhotoInDb(matchId, teamId, side, r2Path, meta, uploader) {
+  /* `uploader` (optional) keeps an existing row's attribution — used by the front/back swap */
+  const who = uploader || { uploader_apa_number: state.identity && state.identity.apa_number, uploader_name: state.identity && state.identity.name };
   return sb('POST', 'papertrail',
     'photos?on_conflict=match_id,team_id,side',
     [{
       match_id: matchId, team_id: teamId, side, r2_path: r2Path,
-      uploader_apa_number: state.identity && state.identity.apa_number,
-      uploader_name:       state.identity && state.identity.name,
+      uploader_apa_number: who.uploader_apa_number,
+      uploader_name:       who.uploader_name,
       bytes:        meta.bytes,
       content_type: 'image/jpeg',
       width:  meta.width,
@@ -1722,8 +1724,10 @@ async function swapSides(match, team, front, back) {
     await uploadToR2(back.r2_path, fb);
     /* rows: same paths, swapped metadata, fresh uploaded_at so every cache refetches */
     const metaOf = async (blob) => new Promise(res => { const img = new Image(); const u = URL.createObjectURL(blob); img.onload = () => { res({ bytes: blob.size, width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(u); }; img.onerror = () => res({ bytes: blob.size, width: null, height: null }); img.src = u; });
-    await recordPhotoInDb(match.id, team.team_id, 'front', front.r2_path, await metaOf(bb));
-    await recordPhotoInDb(match.id, team.team_id, 'back',  back.r2_path,  await metaOf(fb));
+    /* keep the ORIGINAL uploader on both rows — a swap is not an upload (the swap itself is in action_log) */
+    const keep = (p) => ({ uploader_apa_number: p.uploader_apa_number, uploader_name: p.uploader_name });
+    await recordPhotoInDb(match.id, team.team_id, 'front', front.r2_path, await metaOf(bb), keep(front));
+    await recordPhotoInDb(match.id, team.team_id, 'back',  back.r2_path,  await metaOf(fb), keep(back));
     logAction('swap_done', { ok: true, r2_path: front.r2_path });
     closeModal();
     toast('Swapped — front is now back, back is now front');
