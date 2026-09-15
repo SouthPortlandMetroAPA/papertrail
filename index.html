@@ -731,7 +731,7 @@ async function loadTeamMatches(team) {
   let photos = [];
   if (matchIds.length) {
     photos = await sb('GET', 'papertrail',
-      'photos?select=id,match_id,side,r2_path,uploaded_at,team_id' +
+      'photos?select=id,match_id,side,r2_path,uploaded_at,team_id,uploader_apa_number,uploader_name' +
       '&team_id=eq.' + team.team_id +
       '&match_id=in.(' + matchIds.join(',') + ')') || [];
   }
@@ -1016,13 +1016,15 @@ async function deleteFromR2(path) {
     });
   } catch (_) {}
 }
-async function recordPhotoInDb(matchId, teamId, side, r2Path, meta) {
+async function recordPhotoInDb(matchId, teamId, side, r2Path, meta, uploader) {
+  /* `uploader` (optional) keeps an existing row's attribution — used by the front/back swap */
+  const who = uploader || { uploader_apa_number: state.identity && state.identity.apa_number, uploader_name: state.identity && state.identity.name };
   return sb('POST', 'papertrail',
     'photos?on_conflict=match_id,team_id,side',
     [{
       match_id: matchId, team_id: teamId, side, r2_path: r2Path,
-      uploader_apa_number: state.identity && state.identity.apa_number,
-      uploader_name:       state.identity && state.identity.name,
+      uploader_apa_number: who.uploader_apa_number,
+      uploader_name:       who.uploader_name,
       bytes:        meta.bytes,
       content_type: 'image/jpeg',
       width:  meta.width,
@@ -1677,17 +1679,64 @@ function renderReviewMode(body, modal, match, team, existingPhotos) {
         <button class="btn btn-outline" data-del-id="${p.id}" data-del-path="${esc(p.r2_path)}">Delete</button>
       </div>
     </div>`).join('');
+  /* 9-Ball Doubles: both pages present → offer to swap them (the two photos get taken in
+     the wrong order often enough to deserve a button). Single-photo formats never see it. */
+  const front = existingPhotos.find(p => p.side === 'front'), back = existingPhotos.find(p => p.side === 'back');
+  const swapHtml = (front && back)
+    ? `<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+         <button type="button" class="btn btn-outline" id="swapSides">⇄ Swap front and back</button>
+         <span class="sub" style="margin:0">Photographed them in the wrong order? One tap fixes it.</span>
+       </div><div id="swapStatus"></div>`
+    : '';
   body.innerHTML = `
     <button type="button" class="modal-x" id="modalX" aria-label="Close">✕</button>
     ${modalHeader(match, team)}
-    <div class="photo-grid" style="margin-top:8px;">${photosHtml}</div>`;
+    <div class="photo-grid" style="margin-top:8px;">${photosHtml}</div>${swapHtml}`;
   body.querySelector('#modalX').onclick = () => closeModal();
+  if (front && back) body.querySelector('#swapSides').onclick = () => swapSides(match, team, front, back);
   body.querySelectorAll('.ph-img').forEach(img => {
     img.onclick = () => openLightbox(img.dataset.photoUrl);
   });
   body.querySelectorAll('[data-del-id]').forEach(b => {
     b.onclick = () => askDelete(parseInt(b.dataset.delId, 10), b.dataset.delPath);
   });
+}
+
+/* ── Swap front ↔ back (9-Ball Doubles) ──────────────────────────────
+   READ BOTH FIRST, then write, then the rows. Writing before both reads are
+   in hand is how a two-way swap ends up with the same photo on both sides
+   (escape 0901-papertrail-swap-clobber). Nothing is written unless both
+   reads succeed; if a write fails midway the operator can re-run the swap. */
+async function swapSides(match, team, front, back) {
+  const st = document.getElementById('swapStatus'), btn = document.getElementById('swapSides');
+  const say = (html) => { if (st) st.innerHTML = html; };
+  btn.disabled = true;
+  say('<div class="status progress"><span class="spinner"></span>Reading both photos…</div>');
+  logAction('swap_start', { ok: true, r2_path: front.r2_path });
+  try {
+    const [fr, br] = await Promise.all([fetch(r2Url(front.r2_path, front), { cache: 'no-store' }), fetch(r2Url(back.r2_path, back), { cache: 'no-store' })]);
+    if (!fr.ok || !br.ok) throw new Error('Could not read the photos (' + fr.status + '/' + br.status + ') — nothing changed.');
+    const [fb, bb] = await Promise.all([fr.blob(), br.blob()]);
+    if (!fb.size || !bb.size) throw new Error('One photo came back empty — nothing changed.');
+    say('<div class="status progress"><span class="spinner"></span>Swapping…</div>');
+    /* front.jpg now receives the BACK bytes, back.jpg the FRONT bytes */
+    await uploadToR2(front.r2_path, bb);
+    await uploadToR2(back.r2_path, fb);
+    /* rows: same paths, swapped metadata, fresh uploaded_at so every cache refetches */
+    const metaOf = async (blob) => new Promise(res => { const img = new Image(); const u = URL.createObjectURL(blob); img.onload = () => { res({ bytes: blob.size, width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(u); }; img.onerror = () => res({ bytes: blob.size, width: null, height: null }); img.src = u; });
+    /* keep the ORIGINAL uploader on both rows — a swap is not an upload (the swap itself is in action_log) */
+    const keep = (p) => ({ uploader_apa_number: p.uploader_apa_number, uploader_name: p.uploader_name });
+    await recordPhotoInDb(match.id, team.team_id, 'front', front.r2_path, await metaOf(bb), keep(front));
+    await recordPhotoInDb(match.id, team.team_id, 'back',  back.r2_path,  await metaOf(fb), keep(back));
+    logAction('swap_done', { ok: true, r2_path: front.r2_path });
+    closeModal();
+    toast('Swapped — front is now back, back is now front');
+    render();
+  } catch (e) {
+    logAction('swap_error', { ok: false, r2_path: front.r2_path, error_message: (e && e.message || String(e)).slice(0, 250) });
+    say('<div class="status error">' + esc(e.message || String(e)) + '</div>');
+    btn.disabled = false;
+  }
 }
 
 /* ── Custom delete-confirmation modal ──────────────────────────────── */
