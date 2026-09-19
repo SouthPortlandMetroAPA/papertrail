@@ -1849,6 +1849,7 @@ async function spmSsoIdentity() {
     if (!b.signedIn) { if (b.error) { const s = document.getElementById('idStatus'); if (s) s.innerHTML = '<div class="status">' + esc(b.error) + '</div>'; } return false; }
     const w = await spmAuth.whoami(b.token);
     if (!(w && w.ok && w.me)) return false;
+    w.me.token = b.token;
     return w.me;
   } catch (e) { return false; }
 }
@@ -1869,7 +1870,8 @@ spmAuth.onChange(function () { location.reload(); });   /* SSO: signed in/out fr
 loadIdentity();
 logAction('init', { ok: true });
 render();
-(async () => { if (!state.identity || !state.identity.sso) { const w = await spmSsoIdentity(); if (w) { saveIdentity({ apa_number: w.member_number, name: w.name, email: w.email, sso: true }); render(); } } })();
+(async () => { if (state.identity && state.identity.sso && state.identity.sso !== spmAuth.get()) { state.identity = null; try { localStorage.removeItem('papertrail.identity'); } catch (_) {} render(); }   /* SSO identity is only as alive as the shared token */
+  if (!state.identity) { const w = await spmSsoIdentity(); if (w) { saveIdentity({ apa_number: w.member_number, name: w.name, email: w.email, sso: w.token }); render(); } } })();
 setInterval(checkVersion, 30000);
 
 </script>
