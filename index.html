@@ -486,6 +486,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="version.js?_=__TS__"></script>
+<script src="https://southportlandmetroapa.github.io/shared/spm-auth.js"></script>
 <script>
 (function(){
   const s = document.currentScript.previousElementSibling;
@@ -642,6 +643,7 @@ function saveIdentity(id) {
 }
 function clearIdentity() {
   logAction('identity_clear', { ok: true });
+  if (state.identity && state.identity.sso) spmAuth.logout();   /* an SSO identity signs out everywhere */
   state.identity = null;
   state.teamCtx = null;
   state.view = 'home';
@@ -1077,12 +1079,14 @@ function renderIdentityForm() {
         <button class="btn btn-primary" id="idGo">Find</button>
       </div>
       <div id="idStatus" style="margin-top:10px;"></div>
+      <p class="hint" style="margin-top:8px;font-size:.9rem">Or <a href="#" id="spmSignIn">sign in once</a> and every South Portland Metro app will know you.</p>
     </div>`;
 }
 function wireIdentityForm() {
   const inp = document.getElementById('idInput');
   const go  = document.getElementById('idGo');
   const st  = document.getElementById('idStatus');
+  spmWireSignIn();
   go.onclick = async () => {
     const v = inp.value.trim();
     if (!v) { inp.focus(); return; }
@@ -1837,10 +1841,37 @@ async function checkVersion() {
   } catch (_) {}
 }
 
+
+/* ── Shared sign-in (spm-auth.js): a session from ANY SPM app identifies you here; the link below mints one for this app ── */
+async function spmSsoIdentity() {
+  try {
+    const b = await spmAuth.boot({ app: 'papertrail' });
+    if (!b.signedIn) { if (b.error) { const s = document.getElementById('idStatus'); if (s) s.innerHTML = '<div class="status">' + esc(b.error) + '</div>'; } return false; }
+    const w = await spmAuth.whoami(b.token);
+    if (!(w && w.ok && w.me)) return false;
+    w.me.token = b.token;
+    return w.me;
+  } catch (e) { return false; }
+}
+function spmWireSignIn() {
+  const a = document.getElementById('spmSignIn'); if (!a) return;
+  a.onclick = async (ev) => {
+    ev.preventDefault();
+    const v = (document.getElementById('idInput').value || '').trim();
+    if (!v) { { const s = document.getElementById('idStatus'); if (s) s.innerHTML = '<div class="status">' + esc('Enter your APA # or email first, then tap Sign in once.') + '</div>'; } return; }
+    { const s = document.getElementById('idStatus'); if (s) s.innerHTML = '<div class="status">' + esc('Sending your sign-in link…') + '</div>'; }
+    const r = await spmAuth.requestLink(v, 'papertrail');
+    { const s = document.getElementById('idStatus'); if (s) s.innerHTML = '<div class="status">' + esc(r.ok ? 'Check your email — tap the link and every SPM app will know you.' : (r.error || 'Something went wrong.')) + '</div>'; }
+  };
+}
+spmAuth.onChange(function () { location.reload(); });   /* SSO: signed in/out from another app */
+
 /* ── Bootstrap ─────────────────────────────────────────────────────── */
 loadIdentity();
 logAction('init', { ok: true });
 render();
+(async () => { if (state.identity && state.identity.sso && state.identity.sso !== spmAuth.get()) { state.identity = null; try { localStorage.removeItem('papertrail.identity'); } catch (_) {} render(); }   /* SSO identity is only as alive as the shared token */
+  if (!state.identity) { const w = await spmSsoIdentity(); if (w) { saveIdentity({ apa_number: w.member_number, name: w.name, email: w.email, sso: w.token }); render(); } } })();
 setInterval(checkVersion, 30000);
 
 </script>
