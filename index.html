@@ -1874,6 +1874,36 @@ render();
   if (!state.identity) { const w = await spmSsoIdentity(); if (w) { saveIdentity({ apa_number: w.member_number, name: w.name, email: w.email, sso: w.token }); render(); } } })();
 setInterval(checkVersion, 30000);
 
+/* ── Live refresh ───────────────────────────────────────────────────────────────────────────────────
+   House rule: an open page whose data changes must poll and re-render, and version updates stay separate.
+   PaperTrail had the version half and none of this, so an edit in Slate was invisible until a manual reload.
+
+   slate.papertrail_pulse returns one opaque hash over THIS member's teams and their divisions' matches. It
+   counts rows as well as taking max(updated_at), because a deleted team moves no surviving timestamp and a
+   timestamp-only signal would leave a gone team on screen. */
+let _pulse = null;
+async function fetchPulse() {
+  if (!state.identity || !state.identity.apa_number) return null;
+  try {
+    /* the app's own helper, so the profile headers and error handling stay in one place */
+    return await sb('POST', 'slate', 'rpc/papertrail_pulse', { p_apa_number: state.identity.apa_number });
+  } catch (e) { return null; }           /* a blip must never disturb the page */
+}
+function captureInProgress() {
+  /* the 9-Ball Doubles wizard is atomic by design: both photos or nothing. Never re-render underneath it. */
+  const m = document.getElementById('uploadModal');
+  return !!(m && m.classList.contains('open'));
+}
+async function pollPulse() {
+  if (document.hidden || captureInProgress()) return;
+  const p = await fetchPulse();
+  if (p === null) return;
+  if (_pulse === null) { _pulse = p; return; }   /* first sample seeds only */
+  if (p !== _pulse) { _pulse = p; await render(); }
+}
+setInterval(pollPulse, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pollPulse(); });
+
 </script>
 
 </body>
