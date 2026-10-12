@@ -651,24 +651,10 @@ function clearIdentity() {
 }
 
 /* ── Player lookup ─────────────────────────────────────────────────── */
-/* Uses slate.papertrail_lookup_player(input) RPC — narrow column return
- * (apa_number, name, email) so anon never sees PII (phones, addresses). */
-async function lookupPlayer(input) {
-  const v = input.trim();
-  if (!v) return null;
-  try {
-    const rows = await sb('POST', 'slate', 'rpc/papertrail_lookup_player', { input: v });
-    const p = (rows && rows[0]) || null;
-    logAction('lookup', { ok: !!p, error_message: p ? null : 'not_found',
-      apa_number: p ? p.apa_number : null,
-      captain_name: p ? p.name : null });
-    return p ? { apa_number: p.apa_number, name: p.name, email: p.email } : null;
-  } catch (e) {
-    logAction('lookup', { ok: false, error_message: (e && e.message || String(e)).slice(0, 250) });
-    throw e;
-  }
-}
-
+/* lookupPlayer() removed 2026-10-12: identity now comes only from the shared SPM Auth
+ * session. It called the anon RPC slate.papertrail_lookup_player and returned a usable identity
+ * from a typed APA number, which is exactly the path sign-in replaces. The RPC itself stays -- other
+ * apps still call it -- but nothing here does. */
 /* ── Current session ───────────────────────────────────────────────── */
 async function loadCurrentSession() {
   if (state.session) return state.session;
@@ -1071,42 +1057,24 @@ async function render() {
 function renderIdentityForm() {
   return `
     <div class="card id-card">
-      <h2>Welcome, Captain</h2>
-      <p>Enter your APA number (full 8-digit form like <code>97225719</code>, OR the 5-digit local form like <code>25719</code>) — or the email APA has on file for you. We'll find your Masters and Doubles teams.</p>
+      <h2>Sign in</h2>
+      <p>Enter your APA number (full 8-digit form like <code>97225719</code>, or the 5-digit local form like <code>25719</code>) — or the email APA has on file for you. We'll email you a link. Tap it once and every South Portland Metro app will know you, on this phone, from then on.</p>
       <div class="id-input-row">
         <input id="idInput" class="id-input" type="text" inputmode="text" autocomplete="off"
           placeholder="APA# (8 or 5 digit) or email" autocapitalize="none" autocorrect="off">
-        <button class="btn btn-primary" id="idGo">Find</button>
+        <button class="btn btn-primary" id="spmSignIn">Send my link</button>
       </div>
       <div id="idStatus" style="margin-top:10px;"></div>
-      <p class="hint" style="margin-top:8px;font-size:.9rem">Or <a href="#" id="spmSignIn">sign in once</a> and every South Portland Metro app will know you.</p>
+      <p class="hint" style="margin-top:8px;font-size:.9rem">The link goes to the email APA has on file for you. No password, and you only do this once.</p>
     </div>`;
 }
 function wireIdentityForm() {
+  /* There is no longer a path from a typed APA number to an identity. The value is only an ADDRESS to
+     mail a link to; spmWireSignIn() hands it to GAS auth_link_request, and identity arrives later via
+     the session. Typing a captain's number used to be enough to become that captain. */
   const inp = document.getElementById('idInput');
-  const go  = document.getElementById('idGo');
-  const st  = document.getElementById('idStatus');
   spmWireSignIn();
-  go.onclick = async () => {
-    const v = inp.value.trim();
-    if (!v) { inp.focus(); return; }
-    go.disabled = true;
-    st.innerHTML = '<div class="status progress"><span class="spinner"></span>Looking up…</div>';
-    try {
-      const player = await lookupPlayer(v);
-      if (!player) {
-        st.innerHTML = '<div class="status error">Couldn’t find that ' +
-          (v.includes('@') ? 'email' : 'APA#') +
-          '. Double-check and try again.</div>';
-        go.disabled = false; return;
-      }
-      saveIdentity(player); render();
-    } catch (e) {
-      st.innerHTML = '<div class="status error">Lookup failed: ' + esc(e.message) + '</div>';
-      go.disabled = false;
-    }
-  };
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') go.click(); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const b = document.getElementById('spmSignIn'); if (b) b.click(); } });
   inp.focus();
 }
 
@@ -1869,6 +1837,10 @@ spmAuth.onChange(function () { location.reload(); });   /* SSO: signed in/out fr
 /* ── Bootstrap ─────────────────────────────────────────────────────── */
 loadIdentity();
 logAction('init', { ok: true });
+/* Any cached identity WITHOUT an sso token predates sign-in being required — it was established by
+   typing an APA number. Drop it rather than honour it, or the change is cosmetic for exactly the
+   people who already used the old path. */
+if (state.identity && !state.identity.sso) { state.identity = null; try { localStorage.removeItem('papertrail.identity'); } catch (_) {} }
 render();
 (async () => { if (state.identity && state.identity.sso && state.identity.sso !== spmAuth.get()) { state.identity = null; try { localStorage.removeItem('papertrail.identity'); } catch (_) {} render(); }   /* SSO identity is only as alive as the shared token */
   if (!state.identity) { const w = await spmSsoIdentity(); if (w) { saveIdentity({ apa_number: w.member_number, name: w.name, email: w.email, sso: w.token }); render(); } } })();
