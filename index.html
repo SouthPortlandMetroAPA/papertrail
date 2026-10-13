@@ -1007,24 +1007,27 @@ async function deleteFromR2(path) {
 async function recordPhotoInDb(matchId, teamId, side, r2Path, meta, uploader) {
   /* `uploader` (optional) keeps an existing row's attribution — used by the front/back swap */
   const who = uploader || { uploader_apa_number: state.identity && state.identity.apa_number, uploader_name: state.identity && state.identity.name };
-  return sb('POST', 'papertrail',
-    'photos?on_conflict=match_id,team_id,side',
-    [{
-      match_id: matchId, team_id: teamId, side, r2_path: r2Path,
-      uploader_apa_number: who.uploader_apa_number,
-      uploader_name:       who.uploader_name,
-      bytes:        meta.bytes,
-      content_type: 'image/jpeg',
-      width:  meta.width,
-      height: meta.height,
-      // Explicit uploaded_at so it changes on EVERY write — needed because
-      // merge-duplicates UPSERTs preserve the row's original uploaded_at
-      // otherwise, which would freeze the r2Url() cache-buster value.
-      uploaded_at: new Date().toISOString()
-    }]);
+  /* Session-gated since 2.24: GAS resolves the token, checks the member is on this team, and writes
+     as service_role. The old call wrote straight to PostgREST with the anon key, which meant anyone
+     holding the public key could write — or overwrite — any team's scoresheet record. */
+  const tok = state.identity && state.identity.sso;
+  if (!tok) throw new Error('You are signed out. Sign in again before uploading.');
+  const res = await ptGas({
+    action: 'pt_photo_save', token: tok,
+    match_id: matchId, team_id: teamId, side: side, r2_path: r2Path,
+    bytes: meta.bytes, width: meta.width, height: meta.height
+  });
+  if (!res || !res.ok) throw new Error((res && res.error) || 'Could not save the photo record.');
+  return res;
 }
 async function deletePhotoRow(photoId) {
-  await sb('DELETE', 'papertrail', 'photos?id=eq.' + photoId);
+  /* Session-gated since 2.24. GAS looks the row up, confirms the signed-in member is on THAT row's
+     team, then deletes as service_role. Deleting straight from the browser meant the anon key could
+     empty the table. */
+  const tok = state.identity && state.identity.sso;
+  if (!tok) throw new Error('You are signed out. Sign in again.');
+  const res = await ptGas({ action: 'pt_photo_delete', token: tok, photo_id: photoId });
+  if (!res || !res.ok) throw new Error((res && res.error) || 'Could not remove the photo record.');
 }
 
 /* ── Render: header ────────────────────────────────────────────────── */
@@ -1477,6 +1480,15 @@ function modalHeader(match, team) {
    rate-limits, and derives roster + uploader name itself) — this call
    carries no content and can never block or fail the upload flow. */
 const NOTIFY_MAILER_URL = 'https://script.google.com/macros/s/AKfycbzGTzkBRTrIIP_tD6sbtOOUmNZkXDdtxPoO4c8fdWt5h3tZFueNSISPv8Q3LWStx73Whw/exec';
+/* notifyUploadEmail below is fire-and-forget; photo writes need the ANSWER, so they use this. */
+async function ptGas(payload) {
+  const r = await fetch(NOTIFY_MAILER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },   /* text/plain: JSON triggers a CORS preflight GAS cannot answer */
+    body: JSON.stringify(payload)
+  });
+  return r.json();
+}
 function notifyUploadEmail(matchId, teamId) {
   try {
     fetch(NOTIFY_MAILER_URL, {
